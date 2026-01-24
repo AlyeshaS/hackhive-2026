@@ -5,7 +5,10 @@ class SuggestionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  Future<void> saveSuggestion(String suggestionId, Map<String, dynamic> data) async {
+  Future<void> saveSuggestion(
+    String suggestionId,
+    Map<String, dynamic> data,
+  ) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not signed in');
     await _firestore.collection('suggestions').doc(suggestionId).set(data);
@@ -18,10 +21,12 @@ class SuggestionService {
   Future<void> swipeSuggestion(String suggestionId, bool liked) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not signed in');
-    await _firestore.collection('suggestions').doc(suggestionId).collection('swipes').doc(currentUser.uid).set({
-      'liked': liked,
-      'timestamp': FieldValue.serverTimestamp(),
-    });
+    await _firestore
+        .collection('suggestions')
+        .doc(suggestionId)
+        .collection('swipes')
+        .doc(currentUser.uid)
+        .set({'liked': liked, 'timestamp': FieldValue.serverTimestamp()});
   }
 
   Stream<QuerySnapshot> getMatchesStream(String partnerUid) {

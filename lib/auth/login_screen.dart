@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 
 class LoginScreen extends StatelessWidget {
@@ -20,9 +19,9 @@ class LoginScreen extends StatelessWidget {
             if (user != null) {
               Navigator.pushReplacementNamed(context, '/partner');
             } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Sign in failed')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('Sign in failed')));
             }
           },
         ),

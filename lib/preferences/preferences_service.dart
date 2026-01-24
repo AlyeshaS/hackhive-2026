@@ -8,13 +8,19 @@ class PreferencesService {
   Future<void> savePreferences(Map<String, dynamic> preferences) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not signed in');
-    await _firestore.collection('preferences').doc(currentUser.uid).set(preferences);
+    await _firestore
+        .collection('preferences')
+        .doc(currentUser.uid)
+        .set(preferences);
   }
 
   Future<Map<String, dynamic>?> getPreferences() async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return null;
-    final doc = await _firestore.collection('preferences').doc(currentUser.uid).get();
+    final doc = await _firestore
+        .collection('preferences')
+        .doc(currentUser.uid)
+        .get();
     return doc.exists ? doc.data() : null;
   }
 }

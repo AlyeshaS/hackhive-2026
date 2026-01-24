@@ -35,8 +35,7 @@ class _PartnerScreenState extends State<PartnerScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            if (_partnerEmail != null)
-              Text('Partner linked: $_partnerEmail'),
+            if (_partnerEmail != null) Text('Partner linked: $_partnerEmail'),
             if (_partnerEmail == null) ...[
               TextField(
                 controller: _emailController,
@@ -45,7 +44,9 @@ class _PartnerScreenState extends State<PartnerScreen> {
               const SizedBox(height: 16),
               ElevatedButton(
                 onPressed: () async {
-                  await _partnerService.linkPartnerByEmail(_emailController.text);
+                  await _partnerService.linkPartnerByEmail(
+                    _emailController.text,
+                  );
                   await _loadPartner();
                   Navigator.pushReplacementNamed(context, '/preferences');
                 },

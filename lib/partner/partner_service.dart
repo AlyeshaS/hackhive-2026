@@ -29,7 +29,10 @@ class PartnerService {
   Future<String?> getPartnerEmail() async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return null;
-    final doc = await _firestore.collection('partners').doc(currentUser.uid).get();
+    final doc = await _firestore
+        .collection('partners')
+        .doc(currentUser.uid)
+        .get();
     return doc.exists ? doc['partnerEmail'] as String : null;
   }
 }

@@ -40,7 +40,9 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 onSaved: (v) => _prefs['interests'] = v,
               ),
               TextFormField(
-                decoration: const InputDecoration(labelText: 'Preferred Location'),
+                decoration: const InputDecoration(
+                  labelText: 'Preferred Location',
+                ),
                 onSaved: (v) => _prefs['location'] = v,
               ),
               const SizedBox(height: 24),
