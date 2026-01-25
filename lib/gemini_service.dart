@@ -94,6 +94,68 @@ Rules:
 ''';
   }
 
+  Future<List<Map<String, dynamic>>> generateDeepTalkTopics() async {
+    final prompt = '''
+You are an expert at creating deep, meaningful conversation starters for couples.
+
+Generate exactly 10 unique, thought-provoking questions or topics that encourage deep discussion and emotional connection.
+
+For EACH topic, use this exact format:
+1. Topic text
+
+Rules:
+- Each topic should be a single, open-ended question or statement
+- Avoid yes/no questions
+- Do not include any extra text before or after the list
+''';
+    final url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1/$_model:generateContent?key=$_apiKey',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {'temperature': 0.8, 'maxOutputTokens': 300},
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final text =
+          data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
+      print('GeminiService: Raw AI response (deep talk):\n$text');
+      final topics = _parseDeepTalkTopics(text);
+      print('GeminiService: Parsed deep talk topics count: \\${topics.length}');
+      return topics;
+    } else {
+      print(
+        'GeminiService: Error response (deep talk): \nStatus: \\${response.statusCode}\nBody: \\${response.body}',
+      );
+      throw Exception('Failed to get deep talk topics from Gemini AI');
+    }
+  }
+
+  List<Map<String, dynamic>> _parseDeepTalkTopics(String text) {
+    final lines = text.split(RegExp(r'\n|\r\n'));
+    final topics = <Map<String, dynamic>>[];
+    int idx = 0;
+    for (var line in lines) {
+      final match = RegExp(r'\d+\.\s*(.+)').firstMatch(line);
+      if (match != null) {
+        final topic = match.group(1)?.trim();
+        topics.add({'id': 'deeptalk_$idx', 'topic': topic ?? 'Untitled'});
+        idx++;
+      }
+    }
+    return topics;
+  }
+
   List<Map<String, dynamic>> _parseSuggestions(String text) {
     final lines = text.split(RegExp(r'\n|\r\n'));
     final suggestions = <Map<String, dynamic>>[];

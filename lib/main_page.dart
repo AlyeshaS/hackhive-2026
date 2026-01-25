@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'suggestions/suggestions_screen.dart';
+import 'deep_talk/deep_talk_screen.dart';
 import 'settings_page.dart';
 
 class MainPage extends StatefulWidget {
@@ -23,12 +24,7 @@ class _MainPageState extends State<MainPage> {
     // Suggestions Tab
     SuggestionsScreen(),
     // Deep Talk Tab
-    Center(
-      child: Text(
-        'Deep Talk Coming Soon 💬',
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
-    ),
+    DeepTalkScreen(),
     // Settings Tab
     SettingsPage(),
   ];
