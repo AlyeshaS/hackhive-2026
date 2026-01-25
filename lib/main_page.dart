@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'suggestions/suggestions_screen.dart';
+import 'settings_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -29,12 +30,7 @@ class _MainPageState extends State<MainPage> {
       ),
     ),
     // Settings Tab
-    Center(
-      child: Text(
-        'Settings Coming Soon ⚙️',
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
-    ),
+    SettingsPage(),
   ];
 
   void _onItemTapped(int index) {

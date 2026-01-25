@@ -26,9 +26,10 @@ class GeminiService {
   final String _model = 'models/gemini-2.0-flash';
 
   Future<List<Map<String, dynamic>>> generateDateSuggestions(
-    List<String> interests,
-  ) async {
-    final prompt = _buildPrompt(interests);
+    List<String> interests, {
+    List<Map<String, String>> exclusions = const [],
+  }) async {
+    final prompt = _buildPrompt(interests, exclusions: exclusions);
     final url = Uri.parse(
       'https://generativelanguage.googleapis.com/v1/$_model:generateContent?key=$_apiKey',
     );
@@ -63,11 +64,22 @@ class GeminiService {
     }
   }
 
-  String _buildPrompt(List<String> interests) {
+  String _buildPrompt(
+    List<String> interests, {
+    List<Map<String, String>> exclusions = const [],
+  }) {
+    String exclusionText = '';
+    if (exclusions.isNotEmpty) {
+      exclusionText = '\n\nDo NOT repeat any of these previous ideas:';
+      for (final ex in exclusions) {
+        exclusionText += '\n- \'${ex['title']}\': ${ex['desc']}';
+      }
+    }
     return '''
 You are an expert date planner for couples.
 
 Based on these interests: ${interests.join(", ")}
+$exclusionText
 
 Generate exactly 8 creative and couple-friendly date ideas.
 

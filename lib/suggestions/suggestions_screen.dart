@@ -14,6 +14,45 @@ class SuggestionsScreen extends StatefulWidget {
 
 class _SuggestionsScreenState extends State<SuggestionsScreen>
     with TickerProviderStateMixin {
+  /// Fetches all suggestions and their swipe status from Firestore, and updates the yes/no/skip lists for the panel.
+  Future<void> fetchSwipedSuggestionsForPanel() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final allSuggestionsSnapshot = await FirebaseFirestore.instance
+        .collection('suggestions')
+        .doc(user.uid)
+        .collection('allSuggestions')
+        .get();
+    final swipesSnapshot = await FirebaseFirestore.instance
+        .collection('swipes')
+        .doc(user.uid)
+        .collection('suggestions')
+        .get();
+    final swipeMap = <String, String>{};
+    for (final doc in swipesSnapshot.docs) {
+      swipeMap[doc.id] = doc['action'] ?? '';
+    }
+    _yes.clear();
+    _no.clear();
+    _skip.clear();
+    for (final doc in allSuggestionsSnapshot.docs) {
+      final suggestion = {
+        'id': doc['id'],
+        'title': doc['title'],
+        'desc': doc['desc'],
+      };
+      final action = swipeMap[doc['id']];
+      if (action == 'yes') {
+        _yes.add(suggestion);
+      } else if (action == 'no') {
+        _no.add(suggestion);
+      } else if (action == 'skip') {
+        _skip.add(suggestion);
+      }
+    }
+    setState(() {});
+  }
+
   // Move _matched and _checkAndStoreMatch to the top of the class
   List<Map<String, dynamic>> _matched = [];
 
@@ -116,10 +155,26 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
       final aiSuggestions = await _geminiService.generateDateSuggestions(
         interests,
       );
-      await FirebaseFirestore.instance
+      // Save all suggestions to /suggestions/{userId}/allSuggestions/{suggestionId}
+      final batch = FirebaseFirestore.instance.batch();
+      final allSuggestionsRef = FirebaseFirestore.instance
           .collection('suggestions')
           .doc(user.uid)
-          .set({'suggestions': aiSuggestions});
+          .collection('allSuggestions');
+      for (final suggestion in aiSuggestions) {
+        final docRef = allSuggestionsRef.doc(suggestion['id']);
+        batch.set(docRef, {
+          'id': suggestion['id'],
+          'title': suggestion['title'],
+          'desc': suggestion['desc'],
+        }, SetOptions(merge: true));
+      }
+      // Also update the current suggestions list for the user (for UI)
+      final userSuggestionsRef = FirebaseFirestore.instance
+          .collection('suggestions')
+          .doc(user.uid);
+      batch.set(userSuggestionsRef, {'suggestions': aiSuggestions});
+      await batch.commit();
       setState(() {
         _suggestions = aiSuggestions;
         _loading = false;
@@ -152,7 +207,8 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
   final List<Map<String, dynamic>> _no = [];
   final List<Map<String, dynamic>> _skip = [];
 
-  void _showSwipedCards() {
+  void _showSwipedCards() async {
+    await fetchSwipedSuggestionsForPanel();
     showModalBottomSheet(
       context: context,
       builder: (context) => DefaultTabController(
