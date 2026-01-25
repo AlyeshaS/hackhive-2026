@@ -3,15 +3,36 @@ import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class GeminiService {
+  /// Lists available Gemini models for the current API key and prints them.
+  Future<void> listAvailableModels() async {
+    final url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1/models?key=$_apiKey',
+    );
+    final response = await http.get(url);
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      print('Available Gemini models:');
+      for (var model in data['models'] ?? []) {
+        print('- ' + (model['name'] ?? 'unknown'));
+      }
+    } else {
+      print(
+        'Failed to list models. Status: \\${response.statusCode} Body: \\${response.body}',
+      );
+    }
+  }
+
   final String _apiKey = dotenv.env['GEMINI_API_KEY'] ?? '';
+  final String _model = 'models/gemini-2.0-flash';
 
   Future<List<Map<String, dynamic>>> generateDateSuggestions(
     List<String> interests,
   ) async {
     final prompt = _buildPrompt(interests);
     final url = Uri.parse(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$_apiKey',
+      'https://generativelanguage.googleapis.com/v1/$_model:generateContent?key=$_apiKey',
     );
+
     final response = await http.post(
       url,
       headers: {'Content-Type': 'application/json'},
@@ -23,6 +44,7 @@ class GeminiService {
             ],
           },
         ],
+        'generationConfig': {'temperature': 0.8, 'maxOutputTokens': 300},
       }),
     );
     if (response.statusCode == 200) {
@@ -31,20 +53,30 @@ class GeminiService {
           data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
       return _parseSuggestions(text);
     } else {
+      print(
+        'GeminiService: Error response: \\nStatus: \\${response.statusCode}\\nBody: \\${response.body}',
+      );
       throw Exception('Failed to get suggestions from Gemini AI');
     }
   }
 
   String _buildPrompt(List<String> interests) {
     return '''
-  You are an expert date planner for couples. Take the following interests: ${interests.join(", ")}, and provide as many creative, fun, and couple-friendly date ideas as you can think of. 
+You are an expert date planner for couples.
 
-  Each suggestion should have:
-  - A short, catchy title
-  - A playful, engaging description that explains the idea and why it would be enjoyable for a couple with these interests
+Based on these interests: ${interests.join(", ")}
 
-  Format your response as a numbered list, with each number representing a unique date idea. Do not limit yourself to a specific number—be as creative and thorough as possible.
-  ''';
+Generate exactly 8 creative and couple-friendly date ideas.
+
+For EACH idea, use this exact format:
+1. Title: Description
+
+Rules:
+- Title must be short and catchy
+- Description must be 1–2 sentences
+- Make the ideas fun, thoughtful, and suitable for couples
+- Do not include any extra text before or after the list
+''';
   }
 
   List<Map<String, dynamic>> _parseSuggestions(String text) {
