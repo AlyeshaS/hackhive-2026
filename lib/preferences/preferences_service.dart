@@ -9,8 +9,10 @@ class PreferencesService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not signed in');
     await _firestore
-        .collection('preferences')
+        .collection('users')
         .doc(currentUser.uid)
+        .collection('preferences')
+        .doc('main')
         .set(preferences);
   }
 
@@ -18,8 +20,10 @@ class PreferencesService {
     final currentUser = _auth.currentUser;
     if (currentUser == null) return null;
     final doc = await _firestore
-        .collection('preferences')
+        .collection('users')
         .doc(currentUser.uid)
+        .collection('preferences')
+        .doc('main')
         .get();
     return doc.exists ? doc.data() : null;
   }

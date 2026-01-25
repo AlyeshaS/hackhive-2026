@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'suggestion_service.dart';
 import '../gemini_service.dart';
@@ -19,34 +20,31 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
     final allSuggestionsSnapshot = await FirebaseFirestore.instance
-        .collection('suggestions')
-        .doc(user.uid)
-        .collection('allSuggestions')
-        .get();
-    final swipesSnapshot = await FirebaseFirestore.instance
-        .collection('swipes')
+        .collection('users')
         .doc(user.uid)
         .collection('suggestions')
         .get();
-    final swipeMap = <String, String>{};
-    for (final doc in swipesSnapshot.docs) {
-      swipeMap[doc.id] = doc['action'] ?? '';
-    }
     _yes.clear();
     _no.clear();
     _skip.clear();
     for (final doc in allSuggestionsSnapshot.docs) {
+      String cleanTitle = doc['title'];
+      String cleanDesc = doc['desc'];
+      if (cleanTitle.startsWith('**'))
+        cleanTitle = cleanTitle.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+      if (cleanDesc.startsWith('**'))
+        cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
       final suggestion = {
         'id': doc['id'],
-        'title': doc['title'],
-        'desc': doc['desc'],
+        'title': cleanTitle,
+        'desc': cleanDesc,
       };
-      final action = swipeMap[doc['id']];
-      if (action == 'yes') {
+      final action = doc['swipe'];
+      if (action == "yes") {
         _yes.add(suggestion);
-      } else if (action == 'no') {
+      } else if (action == "no") {
         _no.add(suggestion);
-      } else if (action == 'skip') {
+      } else if (action == "skip") {
         _skip.add(suggestion);
       }
     }
@@ -61,41 +59,33 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     if (user == null) return;
     final partnerUid = await _getPartnerUid();
     if (partnerUid == null) return;
-    final swipeDoc = await FirebaseFirestore.instance
-        .collection('swipes')
+    // Check if partner swiped 'yes' on this suggestion (support both string and map for swipe)
+    final partnerSuggestionDoc = await FirebaseFirestore.instance
+        .collection('users')
         .doc(partnerUid)
         .collection('suggestions')
         .doc(suggestion['id'])
         .get();
-    if (swipeDoc.exists && swipeDoc.data()?['action'] == 'yes') {
-      // Store match for both users under /matches/{coupleId}/suggestions
-      final coupleId = user.uid.compareTo(partnerUid) < 0
-          ? '${user.uid}_$partnerUid'
-          : '${partnerUid}_${user.uid}';
+    final partnerSwipe = partnerSuggestionDoc.data()?['swipe'];
+    if (partnerSuggestionDoc.exists && partnerSwipe == 'yes') {
+      // Save match for both users using SuggestionService for current user
+      await _suggestionService.saveMatchedSuggestion(
+        suggestion['id'],
+        suggestion,
+      );
+      // Save for partner user (direct Firestore, since SuggestionService uses current user)
       await FirebaseFirestore.instance
-          .collection('matches')
-          .doc(coupleId)
-          .collection('suggestions')
+          .collection('users')
+          .doc(partnerUid)
+          .collection('matched_suggestions')
           .doc(suggestion['id'])
           .set(suggestion);
-      // Optionally update local state
       setState(() {
         if (!_matched.any((s) => s['id'] == suggestion['id'])) {
           _matched.add(suggestion);
         }
       });
     }
-  }
-
-  Future<void> _recordSwipe(String suggestionId, String action) async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) return;
-    await FirebaseFirestore.instance
-        .collection('swipes')
-        .doc(user.uid)
-        .collection('suggestions')
-        .doc(suggestionId)
-        .set({'action': action, 'timestamp': FieldValue.serverTimestamp()});
   }
 
   late final SuggestionService _suggestionService = SuggestionService();
@@ -135,72 +125,123 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
       });
       return;
     }
-    final doc = await FirebaseFirestore.instance
-        .collection('suggestions')
+    // Fetch partner's suggestions if partnerEmail exists
+    String? partnerUid;
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
         .doc(user.uid)
         .get();
-    if (doc.exists && !refresh) {
-      final data = doc.data();
-      if (data != null && data['suggestions'] != null) {
-        setState(() {
-          _suggestions = List<Map<String, dynamic>>.from(data['suggestions']);
-          _loading = false;
-        });
-        return;
+    final userData = userDoc.data();
+    if (userData != null &&
+        userData['partnerEmail'] != null &&
+        userData['partnerEmail'] != '') {
+      final partnerQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('email', isEqualTo: userData['partnerEmail'])
+          .get();
+      if (partnerQuery.docs.isNotEmpty) {
+        partnerUid = partnerQuery.docs.first.id;
       }
     }
-    // If not found or refresh, call Gemini
+    List<Map<String, dynamic>> partnerSuggestions = [];
+    if (partnerUid != null) {
+      final partnerSuggestionsSnap = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(partnerUid)
+          .collection('suggestions')
+          .get();
+      partnerSuggestions = partnerSuggestionsSnap.docs
+          .map(
+            (doc) => {
+              'id': doc['id'],
+              'title': doc['title'],
+              'desc': doc['desc'],
+            },
+          )
+          .toList();
+    }
+    // Get fresh Gemini suggestions with timeout
     final interests = await _getUserInterests();
+    List<Map<String, dynamic>> geminiSuggestions = [];
     try {
-      final aiSuggestions = await _geminiService.generateDateSuggestions(
-        interests,
-      );
-      // Save all suggestions to /suggestions/{userId}/allSuggestions/{suggestionId}
-      final batch = FirebaseFirestore.instance.batch();
-      final allSuggestionsRef = FirebaseFirestore.instance
-          .collection('suggestions')
-          .doc(user.uid)
-          .collection('allSuggestions');
-      for (final suggestion in aiSuggestions) {
-        final docRef = allSuggestionsRef.doc(suggestion['id']);
-        batch.set(docRef, {
-          'id': suggestion['id'],
-          'title': suggestion['title'],
-          'desc': suggestion['desc'],
-        }, SetOptions(merge: true));
-      }
-      // Also update the current suggestions list for the user (for UI)
-      final userSuggestionsRef = FirebaseFirestore.instance
-          .collection('suggestions')
-          .doc(user.uid);
-      batch.set(userSuggestionsRef, {'suggestions': aiSuggestions});
-      await batch.commit();
-      setState(() {
-        _suggestions = aiSuggestions;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-      });
+      geminiSuggestions = await _geminiService
+          .generateDateSuggestions(interests)
+          .timeout(const Duration(seconds: 15));
+    } on TimeoutException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load suggestions: $e')),
+          const SnackBar(
+            content: Text('AI is taking too long. Please try again later.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load Gemini suggestions: $e')),
         );
       }
     }
+    // Merge and deduplicate by id
+    final allSuggestionsMap = <String, Map<String, dynamic>>{};
+    for (final s in geminiSuggestions) {
+      allSuggestionsMap[s['id']] = s;
+    }
+    for (final s in partnerSuggestions) {
+      allSuggestionsMap[s['id']] = s;
+    }
+    final allSuggestions = allSuggestionsMap.values.toList();
+    // Save all displayed suggestions for the current user
+    for (final suggestion in allSuggestions) {
+      // Clean '**' from start if present
+      String cleanTitle = suggestion['title'];
+      String cleanDesc = suggestion['desc'];
+      if (cleanTitle.startsWith('**'))
+        cleanTitle = cleanTitle.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+      if (cleanDesc.startsWith('**'))
+        cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+      final cleanSuggestion = {
+        ...suggestion,
+        'title': cleanTitle,
+        'desc': cleanDesc,
+      };
+      await _suggestionService.saveSuggestion(
+        cleanSuggestion['id'],
+        cleanSuggestion,
+      );
+    }
+    setState(() {
+      _suggestions = allSuggestions.map((s) {
+        String cleanTitle = s['title'];
+        String cleanDesc = s['desc'];
+        if (cleanTitle.startsWith('**'))
+          cleanTitle = cleanTitle.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+        if (cleanDesc.startsWith('**'))
+          cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+        return {...s, 'title': cleanTitle, 'desc': cleanDesc};
+      }).toList();
+      _loading = false;
+    });
   }
 
   Future<String?> _getPartnerUid() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return null;
-    final doc = await FirebaseFirestore.instance
-        .collection('partners')
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
         .doc(user.uid)
         .get();
-    final data = doc.data();
-    if (data == null || data['partnerUid'] == null) return null;
-    return data['partnerUid'] as String;
+    final userData = userDoc.data();
+    if (userData == null ||
+        userData['partnerEmail'] == null ||
+        userData['partnerEmail'] == '')
+      return null;
+    final partnerQuery = await FirebaseFirestore.instance
+        .collection('users')
+        .where('email', isEqualTo: userData['partnerEmail'])
+        .get();
+    if (partnerQuery.docs.isEmpty) return null;
+    return partnerQuery.docs.first.id;
   }
 
   final List<Map<String, dynamic>> _yes = [];
@@ -209,10 +250,11 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
 
   void _showSwipedCards() async {
     await fetchSwipedSuggestionsForPanel();
+    await _loadMatchedSuggestions();
     showModalBottomSheet(
       context: context,
       builder: (context) => DefaultTabController(
-        length: 4,
+        length: 3,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -220,7 +262,6 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
               tabs: [
                 Tab(text: 'Yes'),
                 Tab(text: 'No'),
-                Tab(text: 'Skip'),
                 Tab(text: 'Matched'),
               ],
             ),
@@ -230,7 +271,6 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                 children: [
                   _buildCardList(_yes),
                   _buildCardList(_no),
-                  _buildCardList(_skip),
                   _buildCardList(_matched),
                 ],
               ),
@@ -239,6 +279,27 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
         ),
       ),
     );
+  }
+
+  Future<void> _loadMatchedSuggestions() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+    final matchSnap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .collection('matched_suggestions')
+        .get();
+    setState(() {
+      _matched = matchSnap.docs
+          .map(
+            (doc) => {
+              'id': doc['id'],
+              'title': doc['title'],
+              'desc': doc['desc'],
+            },
+          )
+          .toList();
+    });
   }
 
   Widget _buildCardList(List<Map<String, dynamic>> cards) {
@@ -275,87 +336,227 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
             ? const CircularProgressIndicator()
             : _suggestions.isEmpty
             ? const Text('No suggestions yet.')
-            : SizedBox(
-                width: MediaQuery.of(context).size.width * 0.9,
-                height: MediaQuery.of(context).size.height * 0.7,
-                child: CardSwiper(
-                  cardsCount: _suggestions.length,
-                  numberOfCardsDisplayed: (_suggestions.length < 3)
-                      ? _suggestions.length
-                      : 3,
-                  cardBuilder: (context, index, _, __) {
-                    if (index < 0 || index >= _suggestions.length) return null;
-                    final suggestion = _suggestions[index];
-                    return Card(
-                      color: const Color(0xFFFFEAD0), // soft peach (white-ish)
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                        side: const BorderSide(
-                          color: Color(0xFF96616B), // mauve border
-                          width: 4,
+            : Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 4.0),
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.refresh),
+                      label: const Text(
+                        'Generate More Suggestions',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              suggestion['title'],
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
+                      style:
+                          ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF96616B),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 32,
+                              vertical: 16,
+                            ),
+                            elevation: 2,
+                          ).copyWith(
+                            surfaceTintColor: MaterialStateProperty.all(
+                              Colors.white,
+                            ),
+                          ),
+                      onPressed: _loading
+                          ? null
+                          : () async {
+                              await _loadSuggestions(refresh: true);
+                            },
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(bottom: 1.0),
+                    child: Text(
+                      'You can swipe or click the buttons below.',
+                      style: TextStyle(fontSize: 15, color: Colors.black54),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.9,
+                    height: MediaQuery.of(context).size.height * 0.6,
+                    child: CardSwiper(
+                      cardsCount: _suggestions.length,
+                      numberOfCardsDisplayed: (_suggestions.length < 3)
+                          ? _suggestions.length
+                          : 3,
+                      cardBuilder: (context, index, _, __) {
+                        if (index < 0 || index >= _suggestions.length)
+                          return null;
+                        final suggestion = _suggestions[index];
+                        return Card(
+                          color: const Color(
+                            0xFFFFEAD0,
+                          ), // soft peach (white-ish)
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                            side: const BorderSide(
+                              color: Color(0xFF96616B), // mauve border
+                              width: 4,
+                            ),
+                          ),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
+                                child: Text(
+                                  suggestion['title'],
+                                  style: const TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
                               ),
-                              textAlign: TextAlign.center,
-                            ),
+                              const SizedBox(height: 16),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                ),
+                                child: Text(
+                                  suggestion['desc'],
+                                  style: const TextStyle(fontSize: 18),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 16),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 10),
-                            child: Text(
-                              suggestion['desc'],
-                              style: const TextStyle(fontSize: 18),
-                              textAlign: TextAlign.center,
+                        );
+                      },
+                      onSwipe: (previousIndex, currentIndex, direction) async {
+                        final suggestion = _suggestions[previousIndex];
+                        if (direction == CardSwiperDirection.left) {
+                          _yes.add(suggestion);
+                          await _suggestionService.swipeSuggestion(
+                            suggestion['id'],
+                            'yes',
+                          );
+                          await _checkAndStoreMatch(suggestion);
+                        } else if (direction == CardSwiperDirection.right) {
+                          _no.add(suggestion);
+                          await _suggestionService.swipeSuggestion(
+                            suggestion['id'],
+                            'no',
+                          );
+                        } else {
+                          _skip.add(suggestion);
+                          await _suggestionService.swipeSuggestion(
+                            suggestion['id'],
+                            'skip',
+                          );
+                        }
+                        setState(() {
+                          if (_suggestions.isNotEmpty) {
+                            _suggestions.removeAt(0);
+                          }
+                        });
+                        if (_suggestions.isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('No more suggestions!'),
                             ),
+                          );
+                        }
+                        return false;
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    children: [
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
                           ),
-                        ],
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        onPressed: _suggestions.isEmpty
+                            ? null
+                            : () async {
+                                final suggestion = _suggestions.first;
+                                _yes.add(suggestion);
+                                await _suggestionService.swipeSuggestion(
+                                  suggestion['id'],
+                                  'yes',
+                                );
+                                await _checkAndStoreMatch(suggestion);
+                                setState(() {
+                                  if (_suggestions.isNotEmpty) {
+                                    _suggestions.removeAt(0);
+                                  }
+                                });
+                                if (_suggestions.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('No more suggestions!'),
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: const Icon(Icons.check),
+                        label: const Text('Yes'),
                       ),
-                    );
-                  },
-                  onSwipe: (previousIndex, currentIndex, direction) async {
-                    final suggestion = _suggestions[previousIndex];
-                    if (direction == CardSwiperDirection.left) {
-                      _yes.add(suggestion);
-                      await _suggestionService.swipeSuggestion(
-                        suggestion['id'],
-                        true,
-                      );
-                      await _recordSwipe(suggestion['id'], 'yes');
-                      await _checkAndStoreMatch(suggestion);
-                    } else if (direction == CardSwiperDirection.right) {
-                      _no.add(suggestion);
-                      await _suggestionService.swipeSuggestion(
-                        suggestion['id'],
-                        false,
-                      );
-                      await _recordSwipe(suggestion['id'], 'no');
-                    } else {
-                      _skip.add(suggestion);
-                      await _recordSwipe(suggestion['id'], 'skip');
-                    }
-                    setState(() {
-                      if (_suggestions.isNotEmpty) {
-                        _suggestions.removeAt(0);
-                      }
-                    });
-                    if (_suggestions.isEmpty) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('No more suggestions!')),
-                      );
-                    }
-                    return false;
-                  },
-                ),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red[600],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 12,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
+                          ),
+                        ),
+                        onPressed: _suggestions.isEmpty
+                            ? null
+                            : () async {
+                                final suggestion = _suggestions.first;
+                                _no.add(suggestion);
+                                await _suggestionService.swipeSuggestion(
+                                  suggestion['id'],
+                                  'no',
+                                );
+                                setState(() {
+                                  if (_suggestions.isNotEmpty) {
+                                    _suggestions.removeAt(0);
+                                  }
+                                });
+                                if (_suggestions.isEmpty) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('No more suggestions!'),
+                                    ),
+                                  );
+                                }
+                              },
+                        icon: const Icon(Icons.close),
+                        label: const Text('No'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
       ),
     );

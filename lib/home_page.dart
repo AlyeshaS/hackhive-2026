@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'gemini_service.dart';
+import '_expandable_match_tile.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -85,9 +86,13 @@ class HomePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           StreamBuilder<QuerySnapshot>(
-                            stream: FirebaseFirestore.instance
-                                .collection('matches')
-                                .snapshots(),
+                            stream: user != null
+                                ? FirebaseFirestore.instance
+                                      .collection('users')
+                                      .doc(user.uid)
+                                      .collection('matched_suggestions')
+                                      .snapshots()
+                                : const Stream.empty(),
                             builder: (context, snapshot) {
                               if (snapshot.connectionState ==
                                   ConnectionState.waiting) {
@@ -106,10 +111,8 @@ class HomePage extends StatelessWidget {
                                 );
                               }
                               int count = 0;
-                              if (user != null && snapshot.hasData) {
-                                count = snapshot.data!.docs
-                                    .where((doc) => doc.id.contains(user.uid))
-                                    .length;
+                              if (snapshot.hasData) {
+                                count = snapshot.data!.docs.length;
                               }
                               return Text(
                                 '$count',
@@ -201,13 +204,83 @@ class HomePage extends StatelessWidget {
               color: Theme.of(context).colorScheme.surfaceVariant,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Your recent matches will appear here soon.',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ),
+                child: user == null
+                    ? const Text('Sign in to see your matches.')
+                    : StreamBuilder<QuerySnapshot>(
+                        stream: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(user.uid)
+                            .collection('matched_suggestions')
+                            .limit(5)
+                            .snapshots(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return Row(
+                              children: [
+                                const CircularProgressIndicator(strokeWidth: 2),
+                                const SizedBox(width: 12),
+                                Text(
+                                  'Loading...',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onSurfaceVariant,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }
+                          if (snapshot.hasError) {
+                            return Text(
+                              'Could not load matches.',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.red,
+                              ),
+                            );
+                          }
+                          final docs = snapshot.data?.docs ?? [];
+                          if (docs.isEmpty) {
+                            return Text(
+                              'No recent matches yet.',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onSurfaceVariant,
+                              ),
+                            );
+                          }
+                          ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: docs.length,
+                            itemBuilder: (context, index) {
+                              final data =
+                                  docs[index].data() as Map<String, dynamic>;
+                              return ExpandableMatchTile(
+                                title: data['title'] ?? 'No Title',
+                                description: data['desc'] ?? '',
+                              );
+                            },
+                          );
+                          return ListView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            itemCount: docs.length,
+                            itemBuilder: (context, index) {
+                              final data =
+                                  docs[index].data() as Map<String, dynamic>;
+                              return ExpandableMatchTile(
+                                title: data['title'] ?? 'No Title',
+                                description: data['desc'] ?? '',
+                              );
+                            },
+                          );
+                        },
+                      ),
               ),
             ),
           ],

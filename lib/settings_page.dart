@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'partner/partner_service.dart';
 import 'preferences/preferences_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsPage extends StatefulWidget {
   const SettingsPage({Key? key}) : super(key: key);
@@ -13,7 +13,7 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   User? user;
   String? partnerEmail;
-  final PartnerService _partnerService = PartnerService();
+
   final PreferencesService _preferencesService = PreferencesService();
   bool isLoading = true;
 
@@ -31,10 +31,16 @@ class _SettingsPageState extends State<SettingsPage> {
       });
       return;
     }
-    final partner = await _partnerService.getPartnerEmail();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+    final data = userDoc.data();
     setState(() {
       user = currentUser;
-      partnerEmail = partner;
+      partnerEmail = data != null && data['partnerEmail'] != null
+          ? data['partnerEmail'] as String
+          : null;
       isLoading = false;
     });
   }
@@ -67,14 +73,20 @@ class _SettingsPageState extends State<SettingsPage> {
       isLoading = true;
     });
     try {
-      await _partnerService.linkPartnerByEmail(partnerEmailInput);
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) throw Exception('Not signed in');
+      final lowerPartnerEmail = partnerEmailInput.toLowerCase();
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .set({'partnerEmail': lowerPartnerEmail}, SetOptions(merge: true));
       await _loadUserData();
     } catch (e) {
       setState(() {
         isLoading = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to link partner: e.toString()}')),
+        SnackBar(content: Text('Failed to link partner: ${e.toString()}')),
       );
     }
   }
@@ -103,7 +115,12 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       isLoading = true;
     });
-    await _partnerService.linkPartnerByEmail('');
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .set({'partnerEmail': ''}, SetOptions(merge: true));
     await _loadUserData();
   }
 

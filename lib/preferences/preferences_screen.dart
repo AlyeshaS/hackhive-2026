@@ -202,7 +202,7 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                   'location': _selected['location'],
                 };
                 await _preferencesService.savePreferences(prefs);
-                Navigator.pushReplacementNamed(context, '/partner');
+                Navigator.pushReplacementNamed(context, '/main');
               },
             ),
           ],

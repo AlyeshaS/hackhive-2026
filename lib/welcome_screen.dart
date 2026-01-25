@@ -62,7 +62,35 @@ class WelcomeScreen extends StatelessWidget {
                 ),
                 onPressed: () async {
                   await _authService.signOut();
-                  final user = await _authService.signInWithGoogle();
+                  String? partnerEmail;
+                  // Prompt for partner email before sign in
+                  await showDialog(
+                    context: context,
+                    builder: (context) {
+                      final controller = TextEditingController();
+                      return AlertDialog(
+                        title: const Text('Enter Partner Email (optional)'),
+                        content: TextField(
+                          controller: controller,
+                          decoration: const InputDecoration(
+                            hintText: 'Partner Email',
+                          ),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () {
+                              partnerEmail = controller.text.trim();
+                              Navigator.of(context).pop();
+                            },
+                            child: const Text('Continue'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                  final user = await _authService.signInWithGoogle(
+                    partnerEmail: partnerEmail,
+                  );
                   if (user != null) {
                     final hasPrefs = await _hasPreferences();
                     if (hasPrefs) {

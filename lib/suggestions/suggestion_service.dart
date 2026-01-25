@@ -11,30 +11,50 @@ class SuggestionService {
   ) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not signed in');
-    await _firestore.collection('suggestions').doc(suggestionId).set(data);
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('suggestions')
+        .doc(suggestionId)
+        .set({...data, 'swipe': null});
   }
 
   Stream<QuerySnapshot> getSuggestionsStream() {
-    return _firestore.collection('suggestions').snapshots();
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) {
+      // Return an empty stream if not signed in
+      return const Stream.empty();
+    }
+    return _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('suggestions')
+        .snapshots();
   }
 
-  Future<void> swipeSuggestion(String suggestionId, bool liked) async {
+  Future<void> swipeSuggestion(String suggestionId, String action) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('Not signed in');
+    // Store the swipe directly in the suggestion doc
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('suggestions')
+        .doc(suggestionId)
+        .set({'swipe': action}, SetOptions(merge: true));
+  }
+
+  Future<void> saveMatchedSuggestion(
+    String suggestionId,
+    Map<String, dynamic> data,
+  ) async {
     final currentUser = _auth.currentUser;
     if (currentUser == null) throw Exception('Not signed in');
     await _firestore
-        .collection('suggestions')
-        .doc(suggestionId)
-        .collection('swipes')
+        .collection('users')
         .doc(currentUser.uid)
-        .set({'liked': liked, 'timestamp': FieldValue.serverTimestamp()});
-  }
-
-  Stream<QuerySnapshot> getMatchesStream(String partnerUid) {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) throw Exception('Not signed in');
-    return _firestore
-        .collection('suggestions')
-        .where('matches', arrayContains: [currentUser.uid, partnerUid])
-        .snapshots();
+        .collection('matched_suggestions')
+        .doc(suggestionId)
+        .set(data);
   }
 }
