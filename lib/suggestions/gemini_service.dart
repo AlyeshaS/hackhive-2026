@@ -51,10 +51,13 @@ class GeminiService {
       final data = jsonDecode(response.body);
       final text =
           data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
-      return _parseSuggestions(text);
+      print('GeminiService: Raw AI response:\n$text');
+      final suggestions = _parseSuggestions(text);
+      print('GeminiService: Parsed suggestions count: \\${suggestions.length}');
+      return suggestions;
     } else {
       print(
-        'GeminiService: Error response: \\nStatus: \\${response.statusCode}\\nBody: \\${response.body}',
+        'GeminiService: Error response: \nStatus: \\${response.statusCode}\nBody: \\${response.body}',
       );
       throw Exception('Failed to get suggestions from Gemini AI');
     }
@@ -72,7 +75,7 @@ For EACH idea, use this exact format:
 1. Title: Description
 
 Rules:
-- Title must be short and catchy
+- Title must be short and describe a realistic, doable date activity
 - Description must be 1–2 sentences
 - Make the ideas fun, thoughtful, and suitable for couples
 - Do not include any extra text before or after the list
@@ -82,13 +85,18 @@ Rules:
   List<Map<String, dynamic>> _parseSuggestions(String text) {
     final lines = text.split(RegExp(r'\n|\r\n'));
     final suggestions = <Map<String, dynamic>>[];
+    int idx = 0;
     for (var line in lines) {
       final match = RegExp(r'\d+\.\s*(.+?):\s*(.+)').firstMatch(line);
       if (match != null) {
+        final title = match.group(1)?.trim();
+        final desc = match.group(2)?.trim();
         suggestions.add({
-          'title': match.group(1)?.trim() ?? '',
-          'desc': match.group(2)?.trim() ?? '',
+          'id': 'suggestion_$idx',
+          'title': title ?? 'Untitled',
+          'desc': desc ?? 'No description available',
         });
+        idx++;
       }
     }
     return suggestions;

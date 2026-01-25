@@ -224,7 +224,9 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                 height: MediaQuery.of(context).size.height * 0.7,
                 child: CardSwiper(
                   cardsCount: _suggestions.length,
-                  numberOfCardsDisplayed: 3,
+                  numberOfCardsDisplayed: (_suggestions.length < 3)
+                      ? _suggestions.length
+                      : 3,
                   cardBuilder: (context, index, _, __) {
                     if (index < 0 || index >= _suggestions.length) return null;
                     final suggestion = _suggestions[index];
@@ -240,17 +242,25 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Text(
-                            suggestion['title'],
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              suggestion['title'],
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
                           ),
                           const SizedBox(height: 16),
-                          Text(
-                            suggestion['desc'],
-                            style: const TextStyle(fontSize: 18),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            child: Text(
+                              suggestion['desc'],
+                              style: const TextStyle(fontSize: 18),
+                              textAlign: TextAlign.center,
+                            ),
                           ),
                         ],
                       ),
@@ -277,8 +287,12 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                       _skip.add(suggestion);
                       await _recordSwipe(suggestion['id'], 'skip');
                     }
-                    setState(() {});
-                    if (previousIndex == _suggestions.length - 1) {
+                    setState(() {
+                      if (_suggestions.isNotEmpty) {
+                        _suggestions.removeAt(0);
+                      }
+                    });
+                    if (_suggestions.isEmpty) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text('No more suggestions!')),
                       );
