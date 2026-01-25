@@ -48,7 +48,7 @@ class _PartnerScreenState extends State<PartnerScreen> {
                     _emailController.text,
                   );
                   await _loadPartner();
-                  Navigator.pushReplacementNamed(context, '/preferences');
+                  Navigator.pushReplacementNamed(context, '/main');
                 },
                 child: const Text('Link'),
               ),
