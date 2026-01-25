@@ -8,9 +8,11 @@ import 'suggestions/suggestions_screen.dart';
 import 'welcome_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_page.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await dotenv.load();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
