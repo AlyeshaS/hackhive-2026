@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "174055236675",
+    "project_id": "hackhive-2026",
+    "storage_bucket": "hackhive-2026.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:174055236675:android:f214a2335a3bae1962e0f6",
+        "android_client_info": {
+          "package_name": "com.example.hackhive2026"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDOvYI3kkLNE6JegpX3zna862RkxcAE6QQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
