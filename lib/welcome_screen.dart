@@ -23,6 +23,13 @@ class WelcomeScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
+              // Closr Logo
+              Image.asset(
+                'assets/closr_logo.png',
+                height: 150,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 24),
               Text(
                 'Welcome to Closr',
                 style: TextStyle(
@@ -34,7 +41,7 @@ class WelcomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 16),
               Text(
-                'Making together feel easier.',
+                'Making together feel easier',
                 style: TextStyle(
                   fontSize: 20,
                   color: Theme.of(context).colorScheme.onBackground,

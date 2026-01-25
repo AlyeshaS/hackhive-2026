@@ -156,6 +156,43 @@ Rules:
     return topics;
   }
 
+  /// Fetches a motivational or relationship quote from Gemini for the tip of the day.
+  Future<String> fetchQuoteOfTheDay() async {
+    final prompt = '''
+You are an expert at providing short, inspiring, and thoughtful quotes for couples or personal growth.
+
+Generate ONE unique, motivational or relationship-focused quote (1–2 sentences). Do not include any extra text, just the quote itself.
+''';
+    final url = Uri.parse(
+      'https://generativelanguage.googleapis.com/v1/$_model:generateContent?key=$_apiKey',
+    );
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': prompt},
+            ],
+          },
+        ],
+        'generationConfig': {'temperature': 0.7, 'maxOutputTokens': 60},
+      }),
+    );
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final text =
+          data['candidates']?[0]?['content']?['parts']?[0]?['text'] ?? '';
+      return text.trim();
+    } else {
+      print(
+        'GeminiService: Error response (quote): \nStatus: \\${response.statusCode}\\nBody: \\${response.body}',
+      );
+      throw Exception('Failed to get quote from Gemini AI');
+    }
+  }
+
   List<Map<String, dynamic>> _parseSuggestions(String text) {
     final lines = text.split(RegExp(r'\n|\r\n'));
     final suggestions = <Map<String, dynamic>>[];

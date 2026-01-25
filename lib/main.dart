@@ -8,6 +8,7 @@ import 'suggestions/suggestions_screen.dart';
 import 'welcome_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_page.dart';
+import 'auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
@@ -54,7 +55,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      initialRoute: '/welcome',
+      home: const AuthGate(),
       routes: {
         '/welcome': (context) => const WelcomeScreen(),
         '/main': (context) => const MainPage(),

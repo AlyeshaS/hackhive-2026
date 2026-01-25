@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'suggestions/suggestions_screen.dart';
 import 'deep_talk/deep_talk_screen.dart';
 import 'settings_page.dart';
+import 'home_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -15,12 +16,7 @@ class _MainPageState extends State<MainPage> {
 
   static final List<Widget> _pages = <Widget>[
     // Home Tab
-    Center(
-      child: Text(
-        'Welcome Home! 👋',
-        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-      ),
-    ),
+    HomePage(),
     // Suggestions Tab
     SuggestionsScreen(),
     // Deep Talk Tab
