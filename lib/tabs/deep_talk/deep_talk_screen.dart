@@ -1,7 +1,6 @@
+// deep_talk_screen.dart
 import 'package:flutter/material.dart';
 import 'deep_talk_service.dart';
-import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import '../../gemini_service.dart';
 
 class DeepTalkScreen extends StatefulWidget {
   const DeepTalkScreen({super.key});
@@ -13,9 +12,17 @@ class DeepTalkScreen extends StatefulWidget {
 class _DeepTalkScreenState extends State<DeepTalkScreen> {
   final DeepTalkService _service = DeepTalkService();
   List<Map<String, dynamic>> _topics = [];
-  // Removed completed topics tracking
   int _currentIndex = 0;
   bool _loading = false;
+
+  // Topic depth labels for display
+  final List<String> _depthLabels = [
+    'Light',
+    'Curious',
+    'Meaningful',
+    'Vulnerable',
+    'Deep',
+  ];
 
   @override
   void initState() {
@@ -42,134 +49,215 @@ class _DeepTalkScreenState extends State<DeepTalkScreen> {
     });
   }
 
-  // Removed mark as complete logic
-
-  // Removed completed topics modal
+  String _depthLabelFor(int index) {
+    if (_topics.isEmpty) return '';
+    final i = index % _depthLabels.length;
+    return _depthLabels[i];
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Deep Talk')),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-            child: ElevatedButton(
-              onPressed: _generateMoreTopics,
-              style:
-                  ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF96616B), // pink background
-                    foregroundColor: Colors.white, // text color
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 32,
-                      vertical: 16,
-                    ),
-                    elevation: 2,
-                  ).copyWith(
-                    surfaceTintColor: WidgetStateProperty.all(Colors.white),
-                  ),
-              child: const Text(
-                'Generate More Cards',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
+    final cs = Theme.of(context).colorScheme;
 
-                  fontSize: 16,
-                ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Description
+          Text(
+            'Questions to spark real conversation — take turns or explore together.',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: cs.onSurfaceVariant,
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 20),
+
+          // Generate button
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _loading ? null : _generateMoreTopics,
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Generate new cards'),
+              style: OutlinedButton.styleFrom(
+                minimumSize: const Size.fromHeight(46),
               ),
             ),
           ),
+          const SizedBox(height: 24),
+
+          // Card area
           Expanded(
-            child: Center(
-              child: _loading
-                  ? const CircularProgressIndicator()
-                  : _topics.isEmpty
-                  ? const Text('No topics yet.')
-                  : SizedBox(
-                      width: MediaQuery.of(context).size.width * 0.9,
-                      height: MediaQuery.of(context).size.height * 0.7,
-                      child: Card(
-                        color: const Color(0xFFFFEAD0),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          side: const BorderSide(
-                            color: Color(0xFF96616B),
-                            width: 4,
+            child: _loading
+                ? Center(
+                    child: CircularProgressIndicator(
+                      color: cs.primary,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : _topics.isEmpty
+                ? Center(
+                    child: Text(
+                      'No topics yet — tap Generate to start.',
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  )
+                : Column(
+                    children: [
+                      // Progress indicator
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_currentIndex + 1} / ${_topics.length}',
+                            style: Theme.of(context).textTheme.labelSmall,
                           ),
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Center(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      'Topic ${_currentIndex + 1} of ${_topics.length}',
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                      ),
-                                      child: Text(
-                                        _topics[_currentIndex]['topic'],
-                                        style: const TextStyle(fontSize: 22),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: cs.primaryContainer,
+                              borderRadius: BorderRadius.circular(100),
+                            ),
+                            child: Text(
+                              _depthLabelFor(_currentIndex),
+                              style: TextStyle(
+                                fontFamily: 'DMSans',
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: cs.primary,
                               ),
                             ),
-                            Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_left,
-                                        size: 32,
-                                      ),
-                                      onPressed: _currentIndex > 0
-                                          ? () =>
-                                                setState(() => _currentIndex--)
-                                          : null,
-                                    ),
-                                    const SizedBox(width: 32),
-                                    IconButton(
-                                      icon: const Icon(
-                                        Icons.arrow_right,
-                                        size: 32,
-                                      ),
-                                      onPressed:
-                                          _currentIndex < _topics.length - 1
-                                          ? () =>
-                                                setState(() => _currentIndex++)
-                                          : null,
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 24),
-                              ],
-                            ),
-                          ],
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+
+                      // Linear progress bar
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: (_currentIndex + 1) / _topics.length,
+                          backgroundColor: cs.outlineVariant,
+                          valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+                          minHeight: 3,
                         ),
                       ),
-                    ),
-            ),
+                      const SizedBox(height: 20),
+
+                      // The card
+                      Expanded(
+                        child: Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: cs.primary.withOpacity(0.3),
+                              width: 1.5,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: cs.primary.withOpacity(0.06),
+                                blurRadius: 24,
+                                spreadRadius: 4,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(28),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _topics[_currentIndex]['topic'],
+                                  style: Theme.of(context).textTheme.titleLarge
+                                      ?.copyWith(
+                                        fontFamily: 'CormorantGaramond',
+                                        fontSize: 22,
+                                        fontStyle: FontStyle.italic,
+                                        height: 1.45,
+                                        color: cs.onSurface,
+                                      ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+
+                      // Navigation row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _NavButton(
+                            icon: Icons.arrow_back_rounded,
+                            onPressed: _currentIndex > 0
+                                ? () => setState(() => _currentIndex--)
+                                : null,
+                            cs: cs,
+                          ),
+                          const SizedBox(width: 48),
+                          _NavButton(
+                            icon: Icons.arrow_forward_rounded,
+                            onPressed: _currentIndex < _topics.length - 1
+                                ? () => setState(() => _currentIndex++)
+                                : null,
+                            cs: cs,
+                            primary: true,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _NavButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback? onPressed;
+  final ColorScheme cs;
+  final bool primary;
+  const _NavButton({
+    required this.icon,
+    required this.onPressed,
+    required this.cs,
+    this.primary = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: primary ? cs.primary : cs.primaryContainer,
+      shape: const CircleBorder(),
+      child: InkWell(
+        onTap: onPressed,
+        customBorder: const CircleBorder(),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Icon(
+            icon,
+            color: primary
+                ? cs.onPrimary
+                : (onPressed == null ? cs.outline : cs.primary),
+            size: 22,
+          ),
+        ),
       ),
     );
   }

@@ -3,7 +3,6 @@ import 'tabs/home_page.dart';
 import 'tabs/connect/connect_screen.dart';
 import 'tabs/play/play_screen.dart';
 import 'tabs/memories/memories_screen.dart';
-import 'tabs/character/character_screen.dart';
 import 'tabs/settings_page.dart';
 
 class MainPage extends StatefulWidget {
@@ -21,7 +20,6 @@ class _MainPageState extends State<MainPage> {
     const ConnectScreen(),
     const PlayScreen(),
     const MemoriesScreen(),
-    const CharacterScreen(),
     const SettingsPage(),
   ];
 
@@ -33,28 +31,72 @@ class _MainPageState extends State<MainPage> {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      body: SafeArea(child: _pages[_selectedIndex]),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onSurface,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Connect'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.sports_esports),
-            label: 'Play',
+      backgroundColor: cs.surface,
+      body: SafeArea(
+        bottom: false,
+        child: AnimatedSwitcher(
+          duration: const Duration(milliseconds: 200),
+          transitionBuilder: (child, animation) =>
+              FadeTransition(opacity: animation, child: child),
+          child: KeyedSubtree(
+            key: ValueKey<int>(_selectedIndex),
+            child: _pages[_selectedIndex],
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Memories'),
-          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Character'),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
+        ),
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          border: Border(
+            top: BorderSide(color: cs.outline.withOpacity(0.3), width: 0.5),
           ),
-        ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: BottomNavigationBar(
+              currentIndex: _selectedIndex,
+              onTap: _onItemTapped,
+              type: BottomNavigationBarType.fixed,
+              backgroundColor: Colors.transparent,
+              selectedItemColor: cs.primary,
+              unselectedItemColor: cs.onSurfaceVariant.withOpacity(0.6),
+              elevation: 0,
+              selectedFontSize: 10,
+              unselectedFontSize: 10,
+              items: const [
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.home_outlined),
+                  activeIcon: Icon(Icons.home_rounded),
+                  label: 'Home',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.favorite_outline_rounded),
+                  activeIcon: Icon(Icons.favorite_rounded),
+                  label: 'Connect',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.play_circle_outline_rounded),
+                  activeIcon: Icon(Icons.play_circle_rounded),
+                  label: 'Play',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.auto_stories_outlined),
+                  activeIcon: Icon(Icons.auto_stories_rounded),
+                  label: 'Memories',
+                ),
+                BottomNavigationBarItem(
+                  icon: Icon(Icons.person_outline_rounded),
+                  activeIcon: Icon(Icons.person_rounded),
+                  label: 'You',
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

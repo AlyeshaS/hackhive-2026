@@ -91,10 +91,14 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
                 }
               });
             },
-            selectedColor: const Color(0x3396616B),
-            checkmarkColor: Colors.white,
-            backgroundColor: const Color(0xFFFFEAD0),
-            side: const BorderSide(color: Color(0xFF96616B)),
+            selectedColor: Theme.of(
+              context,
+            ).colorScheme.primary.withOpacity(0.18),
+            checkmarkColor: Theme.of(context).colorScheme.onPrimary,
+            backgroundColor: Theme.of(
+              context,
+            ).colorScheme.surfaceContainerHighest,
+            side: BorderSide(color: Theme.of(context).colorScheme.primary),
             selectedShadowColor: Colors.transparent,
             shadowColor: Colors.transparent,
           ),
@@ -182,8 +186,8 @@ class _PreferencesScreenState extends State<PreferencesScreen> {
             const SizedBox(height: 32),
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF96616B),
-                foregroundColor: Colors.white,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 minimumSize: const Size.fromHeight(48),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),

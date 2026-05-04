@@ -350,31 +350,28 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                     padding: const EdgeInsets.only(bottom: 4.0),
                     child: ElevatedButton.icon(
                       icon: const Icon(Icons.refresh, size: 16),
-                      label: const Text(
+                      label: Text(
                         'Generate More',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.bold,
                           fontSize: 12,
                         ),
                       ),
-                      style:
-                          ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF96616B),
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 8,
-                            ),
-                            elevation: 2,
-                          ).copyWith(
-                            surfaceTintColor: WidgetStateProperty.all(
-                              Colors.white,
-                            ),
-                          ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        elevation: 2,
+                      ),
                       onPressed: _loading
                           ? null
                           : () async {
@@ -382,11 +379,16 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                             },
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(bottom: 1.0),
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 1.0),
                     child: Text(
                       'You can swipe or click the buttons below.',
-                      style: TextStyle(fontSize: 15, color: Colors.black54),
+                      style: TextStyle(
+                        fontSize: 15,
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withOpacity(0.6),
+                      ),
                       textAlign: TextAlign.center,
                     ),
                   ),
@@ -404,13 +406,13 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                         }
                         final suggestion = _suggestions[index];
                         return Card(
-                          color: const Color(
-                            0xFFFFEAD0,
-                          ), // soft peach (white-ish)
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.surfaceContainerHighest,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
-                            side: const BorderSide(
-                              color: Color(0xFF96616B), // mauve border
+                            side: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
                               width: 3,
                             ),
                           ),
@@ -490,8 +492,12 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                     children: [
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(
+                            context,
+                          ).colorScheme.primary,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onPrimary,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 40,
                             vertical: 16,
@@ -528,8 +534,10 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                       ),
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red[600],
-                          foregroundColor: Colors.white,
+                          backgroundColor: Theme.of(context).colorScheme.error,
+                          foregroundColor: Theme.of(
+                            context,
+                          ).colorScheme.onError,
                           padding: const EdgeInsets.symmetric(
                             horizontal: 40,
                             vertical: 16,

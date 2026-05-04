@@ -27,4 +27,18 @@ class PreferencesService {
         .get();
     return doc.exists ? doc.data() : null;
   }
+
+  Future<void> updatePreference(
+    String categoryKey,
+    List<dynamic> values,
+  ) async {
+    final currentUser = _auth.currentUser;
+    if (currentUser == null) throw Exception('Not signed in');
+    await _firestore
+        .collection('users')
+        .doc(currentUser.uid)
+        .collection('preferences')
+        .doc('main')
+        .update({categoryKey: values});
+  }
 }

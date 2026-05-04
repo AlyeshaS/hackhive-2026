@@ -1,3 +1,4 @@
+// play_screen.dart
 import 'package:flutter/material.dart';
 
 class PlayScreen extends StatefulWidget {
@@ -25,13 +26,16 @@ class _PlayScreenState extends State<PlayScreen>
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: cs.surface,
       appBar: AppBar(
         title: const Text('Play'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         bottom: TabBar(
           controller: _tabController,
+          dividerColor: cs.outlineVariant,
+          indicatorColor: cs.primary,
+          indicatorWeight: 2,
           tabs: const [
             Tab(text: 'Quests'),
             Tab(text: 'Games'),
@@ -39,56 +43,281 @@ class _PlayScreenState extends State<PlayScreen>
           ],
         ),
       ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Quests Tab
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          const _QuestsTab(),
+          _ComingSoonTab(
+            icon: Icons.sports_esports_outlined,
+            title: 'Game Recommendations',
+            subtitle:
+                'Curated games for two — online and in-person — matched to your vibe.',
+            cs: cs,
+          ),
+          _ComingSoonTab(
+            icon: Icons.explore_outlined,
+            title: 'Date Generator',
+            subtitle:
+                'Tell us your mood, time, and budget — we\'ll plan the perfect date.',
+            cs: cs,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Quests Tab ────────────────────────────────────────────────────────────────
+
+class _QuestsTab extends StatefulWidget {
+  const _QuestsTab();
+
+  @override
+  State<_QuestsTab> createState() => _QuestsTabState();
+}
+
+class _QuestsTabState extends State<_QuestsTab> {
+  // Placeholder quest data — will come from Firestore
+  final List<Map<String, dynamic>> _quests = [
+    {'title': 'Cook a new recipe together', 'done': true, 'emoji': '🍳'},
+    {'title': 'Watch the sunset', 'done': true, 'emoji': '🌅'},
+    {'title': 'Write each other a compliment', 'done': false, 'emoji': '💌'},
+    {'title': 'Take a photo together today', 'done': false, 'emoji': '📸'},
+    {'title': 'Try a new coffee shop', 'done': false, 'emoji': '☕'},
+    {'title': 'Play a board game', 'done': false, 'emoji': '🎲'},
+  ];
+
+  int get _completedCount => _quests.where((q) => q['done'] == true).length;
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Progress banner
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
               children: [
-                Icon(
-                  Icons.checklist,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'This week\'s quest',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '$_completedCount / ${_quests.length} completed',
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: cs.onPrimaryContainer,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: _completedCount / _quests.length,
+                          backgroundColor: cs.primary.withOpacity(0.15),
+                          valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+                          minHeight: 6,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                const Text('Quests & Bingo activities coming soon'),
+                const SizedBox(width: 16),
+                Text(
+                  '${((_completedCount / _quests.length) * 100).round()}%',
+                  style: TextStyle(
+                    fontFamily: 'CormorantGaramond',
+                    fontSize: 36,
+                    fontWeight: FontWeight.w500,
+                    color: cs.primary,
+                  ),
+                ),
               ],
             ),
           ),
-          // Games Tab
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.sports_esports,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
+          const SizedBox(height: 24),
+
+          Text('ACTIVITIES', style: Theme.of(context).textTheme.labelSmall),
+          const SizedBox(height: 12),
+
+          // Quest items
+          ...List.generate(_quests.length, (i) {
+            final quest = _quests[i];
+            final done = quest['done'] as bool;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: GestureDetector(
+                onTap: () => setState(() => _quests[i]['done'] = !done),
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: done
+                        ? cs.primaryContainer.withOpacity(0.5)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: done
+                          ? cs.primary.withOpacity(0.3)
+                          : cs.outlineVariant,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      // Emoji icon
+                      Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: done
+                              ? cs.primaryContainer
+                              : cs.surfaceContainerHighest,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            quest['emoji'],
+                            style: const TextStyle(fontSize: 18),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          quest['title'],
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(
+                                color: done
+                                    ? cs.onSurfaceVariant
+                                    : cs.onSurface,
+                                decoration: done
+                                    ? TextDecoration.lineThrough
+                                    : TextDecoration.none,
+                              ),
+                        ),
+                      ),
+                      // Checkbox
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: done ? cs.primary : Colors.transparent,
+                          borderRadius: BorderRadius.circular(7),
+                          border: Border.all(
+                            color: done ? cs.primary : cs.outline,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: done
+                            ? Icon(
+                                Icons.check_rounded,
+                                size: 14,
+                                color: cs.onPrimary,
+                              )
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                const Text('Game recommendations coming soon'),
-              ],
-            ),
-          ),
-          // Dates Tab
+              ),
+            );
+          }),
+          const SizedBox(height: 8),
+
+          // Coming soon note
           Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.favorite,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                const Text('Date ideas & generator coming soon'),
-              ],
+            child: Text(
+              'More quests & bingo challenges coming soon',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: cs.onSurfaceVariant.withOpacity(0.6),
+                fontSize: 12,
+              ),
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Shared Coming Soon widget ─────────────────────────────────────────────────
+
+class _ComingSoonTab extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final ColorScheme cs;
+  const _ComingSoonTab({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    required this.cs,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.primaryContainer,
+              ),
+              child: Icon(icon, size: 32, color: cs.primary),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              subtitle,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: cs.primaryContainer,
+                borderRadius: BorderRadius.circular(100),
+              ),
+              child: Text(
+                'Coming soon',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: cs.primary,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

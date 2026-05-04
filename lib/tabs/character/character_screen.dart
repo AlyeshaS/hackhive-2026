@@ -14,7 +14,7 @@ class _CharacterScreenState extends State<CharacterScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 2, vsync: this);
   }
 
   @override
@@ -33,7 +33,6 @@ class _CharacterScreenState extends State<CharacterScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(text: 'Customize'),
             Tab(text: 'Mood'),
             Tab(text: 'Evolution'),
           ],
@@ -43,21 +42,6 @@ class _CharacterScreenState extends State<CharacterScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          // Customize Tab
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.palette,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 16),
-                const Text('Character customization coming soon'),
-              ],
-            ),
-          ),
           // Mood Tab
           Center(
             child: Column(
