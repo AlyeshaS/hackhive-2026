@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
 import 'suggestion_service.dart';
-import '../gemini_service.dart';
+import '../../gemini_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -30,10 +30,12 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     for (final doc in allSuggestionsSnapshot.docs) {
       String cleanTitle = doc['title'];
       String cleanDesc = doc['desc'];
-      if (cleanTitle.startsWith('**'))
+      if (cleanTitle.startsWith('**')) {
         cleanTitle = cleanTitle.replaceFirst(RegExp(r'^\*\*+'), '').trim();
-      if (cleanDesc.startsWith('**'))
+      }
+      if (cleanDesc.startsWith('**')) {
         cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+      }
       final suggestion = {
         'id': doc['id'],
         'title': cleanTitle,
@@ -196,10 +198,12 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
       // Clean '**' from start if present
       String cleanTitle = suggestion['title'];
       String cleanDesc = suggestion['desc'];
-      if (cleanTitle.startsWith('**'))
+      if (cleanTitle.startsWith('**')) {
         cleanTitle = cleanTitle.replaceFirst(RegExp(r'^\*\*+'), '').trim();
-      if (cleanDesc.startsWith('**'))
+      }
+      if (cleanDesc.startsWith('**')) {
         cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+      }
       final cleanSuggestion = {
         ...suggestion,
         'title': cleanTitle,
@@ -214,10 +218,12 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
       _suggestions = allSuggestions.map((s) {
         String cleanTitle = s['title'];
         String cleanDesc = s['desc'];
-        if (cleanTitle.startsWith('**'))
+        if (cleanTitle.startsWith('**')) {
           cleanTitle = cleanTitle.replaceFirst(RegExp(r'^\*\*+'), '').trim();
-        if (cleanDesc.startsWith('**'))
+        }
+        if (cleanDesc.startsWith('**')) {
           cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
+        }
         return {...s, 'title': cleanTitle, 'desc': cleanDesc};
       }).toList();
       _loading = false;
@@ -234,8 +240,9 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     final userData = userDoc.data();
     if (userData == null ||
         userData['partnerEmail'] == null ||
-        userData['partnerEmail'] == '')
+        userData['partnerEmail'] == '') {
       return null;
+    }
     final partnerQuery = await FirebaseFirestore.instance
         .collection('users')
         .where('email', isEqualTo: userData['partnerEmail'])
@@ -364,7 +371,7 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                             ),
                             elevation: 2,
                           ).copyWith(
-                            surfaceTintColor: MaterialStateProperty.all(
+                            surfaceTintColor: WidgetStateProperty.all(
                               Colors.white,
                             ),
                           ),
@@ -392,8 +399,9 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                           ? _suggestions.length
                           : 3,
                       cardBuilder: (context, index, _, __) {
-                        if (index < 0 || index >= _suggestions.length)
+                        if (index < 0 || index >= _suggestions.length) {
                           return null;
+                        }
                         final suggestion = _suggestions[index];
                         return Card(
                           color: const Color(

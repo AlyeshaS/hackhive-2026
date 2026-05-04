@@ -6,8 +6,8 @@ class ExpandableMatchTile extends StatefulWidget {
   const ExpandableMatchTile({
     required this.title,
     required this.description,
-    Key? key,
-  }) : super(key: key);
+    super.key,
+  });
 
   @override
   State<ExpandableMatchTile> createState() => _ExpandableMatchTileState();

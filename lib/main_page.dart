@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'suggestions/suggestions_screen.dart';
-import 'deep_talk/deep_talk_screen.dart';
-import 'settings_page.dart';
-import 'home_page.dart';
+import 'tabs/suggestions/suggestions_screen.dart';
+import 'tabs/deep_talk/deep_talk_screen.dart';
+import 'tabs/settings_page.dart';
+import 'tabs/home_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -40,7 +40,7 @@ class _MainPageState extends State<MainPage> {
         onTap: _onItemTapped,
         type: BottomNavigationBarType.fixed,
         selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Theme.of(context).colorScheme.onBackground,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurface,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
           BottomNavigationBarItem(

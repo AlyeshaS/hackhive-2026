@@ -2,8 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'auth/login_screen.dart';
-import 'preferences/preferences_screen.dart';
-import 'suggestions/suggestions_screen.dart';
+import 'tabs/suggestions/suggestions_screen.dart';
 import 'welcome_screen.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'main_page.dart';
@@ -27,9 +26,7 @@ class MyApp extends StatelessWidget {
       primary: const Color(0xFF96616B), // mauve
       onPrimary: const Color(0xFFFFFFFF),
       secondary: const Color(0xFF96616B), // unified mauve
-      onSecondary: const Color(0xFFFFFFFF),
-      background: const Color(0xFFFFEAD0), // soft peach
-      onBackground: const Color(0xFF220C10), // deep burgundy
+      onSecondary: const Color(0xFFFFFFFF), // deep burgundy
       surface: const Color(0xFFFFEAD0),
       onSurface: const Color(0xFF220C10),
       error: Colors.red,
@@ -38,7 +35,7 @@ class MyApp extends StatelessWidget {
       onPrimaryContainer: const Color(0xFF220C10),
       secondaryContainer: Color(0x3396616B), // 20% opacity mauve
       onSecondaryContainer: const Color(0xFF220C10),
-      surfaceVariant: Color(0x1996616B), // 10% opacity mauve
+      surfaceContainerHighest: Color(0x1996616B), // 10% opacity mauve
       onSurfaceVariant: const Color(0xFF220C10),
       outline: const Color(0xFF96616B),
       outlineVariant: const Color(0xFF96616B),
@@ -58,7 +55,6 @@ class MyApp extends StatelessWidget {
       routes: {
         '/welcome': (context) => const WelcomeScreen(),
         '/main': (context) => const MainPage(),
-        '/preferences': (context) => PreferencesScreen(),
         '/suggestions': (context) => SuggestionsScreen(),
       },
     );

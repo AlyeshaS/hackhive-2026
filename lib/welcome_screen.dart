@@ -1,22 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'auth/auth_service.dart';
-import 'preferences/preferences_service.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
 
-  Future<bool> _hasPreferences() async {
-    final prefsService = PreferencesService();
-    final prefs = await prefsService.getPreferences();
-    return prefs != null && prefs.isNotEmpty;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final AuthService _authService = AuthService();
+    final AuthService authService = AuthService();
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32.0),
@@ -44,7 +37,7 @@ class WelcomeScreen extends StatelessWidget {
                 'Making together feel easier',
                 style: TextStyle(
                   fontSize: 20,
-                  color: Theme.of(context).colorScheme.onBackground,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -61,7 +54,7 @@ class WelcomeScreen extends StatelessWidget {
                   ),
                 ),
                 onPressed: () async {
-                  await _authService.signOut();
+                  await authService.signOut();
                   String? partnerEmail;
                   // Prompt for partner email before sign in
                   await showDialog(
@@ -88,16 +81,11 @@ class WelcomeScreen extends StatelessWidget {
                       );
                     },
                   );
-                  final user = await _authService.signInWithGoogle(
+                  final user = await authService.signInWithGoogle(
                     partnerEmail: partnerEmail,
                   );
                   if (user != null) {
-                    final hasPrefs = await _hasPreferences();
-                    if (hasPrefs) {
-                      Navigator.pushReplacementNamed(context, '/main');
-                    } else {
-                      Navigator.pushReplacementNamed(context, '/preferences');
-                    }
+                    Navigator.pushReplacementNamed(context, '/main');
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Sign in failed')),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'deep_talk_service.dart';
 import 'package:flutter_card_swiper/flutter_card_swiper.dart';
-import "../gemini_service.dart";
+import '../../gemini_service.dart';
 
 class DeepTalkScreen extends StatefulWidget {
   const DeepTalkScreen({super.key});
@@ -69,7 +69,7 @@ class _DeepTalkScreenState extends State<DeepTalkScreen> {
                     ),
                     elevation: 2,
                   ).copyWith(
-                    surfaceTintColor: MaterialStateProperty.all(Colors.white),
+                    surfaceTintColor: WidgetStateProperty.all(Colors.white),
                   ),
               child: const Text(
                 'Generate More Cards',
@@ -118,7 +118,9 @@ class _DeepTalkScreenState extends State<DeepTalkScreen> {
                                     ),
                                     const SizedBox(height: 16),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                      ),
                                       child: Text(
                                         _topics[_currentIndex]['topic'],
                                         style: const TextStyle(fontSize: 22),
@@ -135,16 +137,25 @@ class _DeepTalkScreenState extends State<DeepTalkScreen> {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     IconButton(
-                                      icon: const Icon(Icons.arrow_left, size: 32),
+                                      icon: const Icon(
+                                        Icons.arrow_left,
+                                        size: 32,
+                                      ),
                                       onPressed: _currentIndex > 0
-                                          ? () => setState(() => _currentIndex--)
+                                          ? () =>
+                                                setState(() => _currentIndex--)
                                           : null,
                                     ),
                                     const SizedBox(width: 32),
                                     IconButton(
-                                      icon: const Icon(Icons.arrow_right, size: 32),
-                                      onPressed: _currentIndex < _topics.length - 1
-                                          ? () => setState(() => _currentIndex++)
+                                      icon: const Icon(
+                                        Icons.arrow_right,
+                                        size: 32,
+                                      ),
+                                      onPressed:
+                                          _currentIndex < _topics.length - 1
+                                          ? () =>
+                                                setState(() => _currentIndex++)
                                           : null,
                                     ),
                                   ],

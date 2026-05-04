@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'preferences/preferences_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsPage extends StatefulWidget {
-  const SettingsPage({Key? key}) : super(key: key);
+  const SettingsPage({super.key});
 
   @override
   State<SettingsPage> createState() => _SettingsPageState();
@@ -13,8 +12,6 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   User? user;
   String? partnerEmail;
-
-  final PreferencesService _preferencesService = PreferencesService();
   bool isLoading = true;
 
   @override
@@ -145,7 +142,7 @@ class _SettingsPageState extends State<SettingsPage> {
         foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
         elevation: 0,
       ),
-      backgroundColor: Theme.of(context).colorScheme.background,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       body: Column(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -288,19 +285,7 @@ class _SettingsPageState extends State<SettingsPage> {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    FutureBuilder<Map<String, dynamic>?>(
-                      future: _preferencesService.getPreferences(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState ==
-                            ConnectionState.waiting) {
-                          return const Center(
-                            child: CircularProgressIndicator(),
-                          );
-                        }
-                        final prefs = snapshot.data ?? {};
-                        return _CollapsiblePreferencesSections(prefs: prefs);
-                      },
-                    ),
+                    _CollapsiblePreferencesSections(prefs: {}),
                     const SizedBox(height: 40),
                   ],
                 ),
