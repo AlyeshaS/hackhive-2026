@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'tabs/suggestions/suggestions_screen.dart';
-import 'tabs/deep_talk/deep_talk_screen.dart';
-import 'tabs/settings_page.dart';
 import 'tabs/home_page.dart';
+import 'tabs/connect/connect_screen.dart';
+import 'tabs/play/play_screen.dart';
+import 'tabs/memories/memories_screen.dart';
+import 'tabs/character/character_screen.dart';
+import 'tabs/settings_page.dart';
 
 class MainPage extends StatefulWidget {
   const MainPage({super.key});
@@ -15,14 +17,12 @@ class _MainPageState extends State<MainPage> {
   int _selectedIndex = 0;
 
   static final List<Widget> _pages = <Widget>[
-    // Home Tab
-    HomePage(),
-    // Suggestions Tab
-    SuggestionsScreen(),
-    // Deep Talk Tab
-    DeepTalkScreen(),
-    // Settings Tab
-    SettingsPage(),
+    const HomePage(),
+    const ConnectScreen(),
+    const PlayScreen(),
+    const MemoriesScreen(),
+    const CharacterScreen(),
+    const SettingsPage(),
   ];
 
   void _onItemTapped(int index) {
@@ -43,11 +43,13 @@ class _MainPageState extends State<MainPage> {
         unselectedItemColor: Theme.of(context).colorScheme.onSurface,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+          BottomNavigationBarItem(icon: Icon(Icons.favorite), label: 'Connect'),
           BottomNavigationBarItem(
-            icon: Icon(Icons.favorite),
-            label: 'Suggestions',
+            icon: Icon(Icons.sports_esports),
+            label: 'Play',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.forum), label: 'Deep Talk'),
+          BottomNavigationBarItem(icon: Icon(Icons.history), label: 'Memories'),
+          BottomNavigationBarItem(icon: Icon(Icons.pets), label: 'Character'),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
             label: 'Settings',

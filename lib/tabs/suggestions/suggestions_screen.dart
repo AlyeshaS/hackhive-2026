@@ -349,13 +349,13 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                   Padding(
                     padding: const EdgeInsets.only(bottom: 4.0),
                     child: ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh),
+                      icon: const Icon(Icons.refresh, size: 16),
                       label: const Text(
-                        'Generate More Suggestions',
+                        'Generate More',
                         style: TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
-                          fontSize: 16,
+                          fontSize: 12,
                         ),
                       ),
                       style:
@@ -363,11 +363,11 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                             backgroundColor: const Color(0xFF96616B),
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(8),
                             ),
                             padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 16,
+                              horizontal: 16,
+                              vertical: 8,
                             ),
                             elevation: 2,
                           ).copyWith(
@@ -391,8 +391,8 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                     ),
                   ),
                   SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.9,
-                    height: MediaQuery.of(context).size.height * 0.6,
+                    width: MediaQuery.of(context).size.width * 0.8,
+                    height: MediaQuery.of(context).size.height * 0.42,
                     child: CardSwiper(
                       cardsCount: _suggestions.length,
                       numberOfCardsDisplayed: (_suggestions.length < 3)
@@ -408,10 +408,10 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                             0xFFFFEAD0,
                           ), // soft peach (white-ish)
                           shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(12),
                             side: const BorderSide(
                               color: Color(0xFF96616B), // mauve border
-                              width: 4,
+                              width: 3,
                             ),
                           ),
                           child: Column(
@@ -419,25 +419,25 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                             children: [
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
+                                  horizontal: 8,
                                 ),
                                 child: Text(
                                   suggestion['title'],
                                   style: const TextStyle(
-                                    fontSize: 24,
+                                    fontSize: 18,
                                     fontWeight: FontWeight.bold,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 12),
                               Padding(
                                 padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
+                                  horizontal: 8,
                                 ),
                                 child: Text(
                                   suggestion['desc'],
-                                  style: const TextStyle(fontSize: 18),
+                                  style: const TextStyle(fontSize: 14),
                                   textAlign: TextAlign.center,
                                 ),
                               ),
@@ -485,15 +485,16 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                   ),
                   const SizedBox(height: 24),
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    spacing: 16,
                     children: [
                       ElevatedButton.icon(
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green[600],
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                            horizontal: 40,
+                            vertical: 16,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
@@ -530,8 +531,8 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                           backgroundColor: Colors.red[600],
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                            vertical: 12,
+                            horizontal: 40,
+                            vertical: 16,
                           ),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(30),
