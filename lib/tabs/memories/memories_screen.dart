@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import '../suggestions/suggestions_screen.dart';
 
 class MemoriesScreen extends StatefulWidget {
   const MemoriesScreen({super.key});
@@ -15,7 +14,7 @@ class _MemoriesScreenState extends State<MemoriesScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -29,72 +28,63 @@ class _MemoriesScreenState extends State<MemoriesScreen>
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        title: const Text('Memories'),
-        bottom: TabBar(
-          controller: _tabController,
-          dividerColor: cs.outlineVariant,
-          indicatorColor: cs.primary,
-          indicatorWeight: 2,
-          isScrollable: true,
-          tabAlignment: TabAlignment.start,
-          tabs: const [
-            Tab(text: 'Timeline'),
-            Tab(text: 'Milestones'),
-            Tab(text: 'Watch'),
-            Tab(text: 'Scrapbook'),
-            Tab(text: 'Date Ideas'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          const _TimelineTab(),
-          _ComingSoonTab(
-            icon: Icons.emoji_events_outlined,
-            title: 'Milestones & Achievements',
-            subtitle:
-                'Track your relationship streaks, milestones, and meaningful moments together.',
-            cs: cs,
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: TabBar(
+                  controller: _tabController,
+                  dividerColor: cs.outlineVariant,
+                  indicatorColor: cs.primary,
+                  indicatorWeight: 2,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
+                  tabs: const [
+                    Tab(text: 'Timeline'),
+                    Tab(text: 'Milestones'),
+                    Tab(text: 'Watch'),
+                    Tab(text: 'Scrapbook'),
+                  ],
+                ),
+              ),
+            ),
           ),
-          _ComingSoonTab(
-            icon: Icons.movie_outlined,
-            title: 'Watch Together',
-            subtitle:
-                'A shared list of movies and shows, with reflective prompts after you watch.',
-            cs: cs,
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                const _TimelineTab(),
+                _ComingSoonTab(
+                  icon: Icons.emoji_events_outlined,
+                  title: 'Milestones & Achievements',
+                  subtitle:
+                      'Track your relationship streaks, milestones, and meaningful moments together.',
+                  cs: cs,
+                ),
+                _ComingSoonTab(
+                  icon: Icons.movie_outlined,
+                  title: 'Watch Together',
+                  subtitle:
+                      'A shared list of movies and shows, with reflective prompts after you watch.',
+                  cs: cs,
+                ),
+                _ComingSoonTab(
+                  icon: Icons.photo_album_outlined,
+                  title: 'Scrapbook',
+                  subtitle:
+                      'A beautiful space for photos, notes, and snapshots of your relationship.',
+                  cs: cs,
+                ),
+              ],
+            ),
           ),
-          _ComingSoonTab(
-            icon: Icons.photo_album_outlined,
-            title: 'Scrapbook',
-            subtitle:
-                'A beautiful space for photos, notes, and snapshots of your relationship.',
-            cs: cs,
-          ),
-          // Date Ideas — wrap SuggestionsScreen in a MediaQuery override
-          // to suppress its own AppBar/header since we already have the tab bar
-          const _DateIdeasTab(),
         ],
       ),
     );
-  }
-}
-
-// ── Date Ideas tab — wraps SuggestionsScreen cleanly ─────────────────────────
-
-class _DateIdeasTab extends StatelessWidget {
-  const _DateIdeasTab();
-
-  @override
-  Widget build(BuildContext context) {
-    // SuggestionsScreen manages its own Scaffold/AppBar internally.
-    // We render it inside a ClipRect so it fills the tab body without
-    // showing its own screen title (it uses an AppBar with no title text
-    // currently, so this is fine). If SuggestionsScreen ever adds its own
-    // title AppBar, wrap it in a NestedScrollView or pass a `hideAppBar`
-    // parameter instead.
-    return const SuggestionsScreen();
   }
 }
 
@@ -145,10 +135,7 @@ class _TimelineTab extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'YOUR STORY',
-            style: Theme.of(context).textTheme.labelSmall,
-          ),
+          Text('YOUR STORY', style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 16),
           ...List.generate(_events.length, (i) {
             final event = _events[i];
@@ -195,8 +182,8 @@ class _TimelineTab extends StatelessWidget {
                           color: isMilestone
                               ? cs.primaryContainer
                               : (isDark
-                                  ? const Color(0xFF231519)
-                                  : Colors.white),
+                                    ? const Color(0xFF231519)
+                                    : Colors.white),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
                             color: isMilestone
@@ -217,18 +204,15 @@ class _TimelineTab extends StatelessWidget {
                                 children: [
                                   Text(
                                     event['date'],
-                                    style:
-                                        Theme.of(context).textTheme.labelSmall,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.labelSmall,
                                   ),
                                   const SizedBox(height: 3),
                                   Text(
                                     event['title'],
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .bodyLarge
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w500,
-                                        ),
+                                    style: Theme.of(context).textTheme.bodyLarge
+                                        ?.copyWith(fontWeight: FontWeight.w500),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -236,9 +220,7 @@ class _TimelineTab extends StatelessWidget {
                                     style: Theme.of(context)
                                         .textTheme
                                         .bodyMedium
-                                        ?.copyWith(
-                                          color: cs.onSurfaceVariant,
-                                        ),
+                                        ?.copyWith(color: cs.onSurfaceVariant),
                                   ),
                                 ],
                               ),
@@ -257,9 +239,9 @@ class _TimelineTab extends StatelessWidget {
             child: Text(
               'Full activity timeline coming soon',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: cs.onSurfaceVariant.withOpacity(0.6),
-                    fontSize: 12,
-                  ),
+                color: cs.onSurfaceVariant.withOpacity(0.6),
+                fontSize: 12,
+              ),
             ),
           ),
         ],
@@ -308,16 +290,14 @@ class _ComingSoonTab extends StatelessWidget {
             const SizedBox(height: 10),
             Text(
               subtitle,
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: cs.onSurfaceVariant),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 20),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: cs.primaryContainer,
                 borderRadius: BorderRadius.circular(100),

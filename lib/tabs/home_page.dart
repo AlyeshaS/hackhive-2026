@@ -145,7 +145,9 @@ class HomePage extends StatelessWidget {
             const SizedBox(height: 10),
             Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: Theme.of(context).brightness == Brightness.dark
+                    ? const Color(0xFF231519)
+                    : Colors.white,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: cs.outlineVariant),
               ),

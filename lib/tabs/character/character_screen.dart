@@ -25,50 +25,57 @@ class _CharacterScreenState extends State<CharacterScreen>
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Character'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        bottom: TabBar(
-          controller: _tabController,
-          tabs: const [
-            Tab(text: 'Mood'),
-            Tab(text: 'Evolution'),
-          ],
-        ),
-      ),
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: TabBarView(
-        controller: _tabController,
+      backgroundColor: cs.surface,
+      body: Column(
         children: [
-          // Mood Tab
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  Icons.sentiment_very_satisfied,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: TabBar(
+                  controller: _tabController,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
+                  tabs: const [
+                    Tab(text: 'Mood'),
+                    Tab(text: 'Evolution'),
+                  ],
                 ),
-                const SizedBox(height: 16),
-                const Text('Mood & current state coming soon'),
-              ],
+              ),
             ),
           ),
-          // Evolution Tab
-          Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
               children: [
-                Icon(
-                  Icons.trending_up,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.primary,
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.sentiment_very_satisfied,
+                        size: 64,
+                        color: cs.primary,
+                      ),
+                      const SizedBox(height: 16),
+                      const Text('Mood & current state coming soon'),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 16),
-                const Text('Unlocks & evolution coming soon'),
+                Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.trending_up, size: 64, color: cs.primary),
+                      const SizedBox(height: 16),
+                      const Text('Unlocks & evolution coming soon'),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),

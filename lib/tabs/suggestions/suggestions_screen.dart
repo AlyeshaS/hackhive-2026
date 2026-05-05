@@ -15,7 +15,17 @@ class SuggestionsScreen extends StatefulWidget {
 
 class _SuggestionsScreenState extends State<SuggestionsScreen>
     with TickerProviderStateMixin {
-  /// Fetches all suggestions and their swipe status from Firestore, and updates the yes/no/skip lists for the panel.
+  // Controller that lets buttons trigger the real swipe animation
+  final CardSwiperController _swiperController = CardSwiperController();
+
+  @override
+  void dispose() {
+    _swiperController.dispose();
+    super.dispose();
+  }
+
+  // ── Firestore / data helpers (UNCHANGED) ────────────────────────────────────
+
   Future<void> fetchSwipedSuggestionsForPanel() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -53,7 +63,6 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     setState(() {});
   }
 
-  // Move _matched and _checkAndStoreMatch to the top of the class
   List<Map<String, dynamic>> _matched = [];
 
   Future<void> _checkAndStoreMatch(Map<String, dynamic> suggestion) async {
@@ -61,7 +70,6 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     if (user == null) return;
     final partnerUid = await _getPartnerUid();
     if (partnerUid == null) return;
-    // Check if partner swiped 'yes' on this suggestion (support both string and map for swipe)
     final partnerSuggestionDoc = await FirebaseFirestore.instance
         .collection('users')
         .doc(partnerUid)
@@ -70,12 +78,10 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
         .get();
     final partnerSwipe = partnerSuggestionDoc.data()?['swipe'];
     if (partnerSuggestionDoc.exists && partnerSwipe == 'yes') {
-      // Save match for both users using SuggestionService for current user
       await _suggestionService.saveMatchedSuggestion(
         suggestion['id'],
         suggestion,
       );
-      // Save for partner user (direct Firestore, since SuggestionService uses current user)
       await FirebaseFirestore.instance
           .collection('users')
           .doc(partnerUid)
@@ -98,7 +104,6 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Only load if not already loading or loaded
     if (!_loading && _suggestions.isEmpty) {
       _loadSuggestions(refresh: true);
     }
@@ -117,17 +122,12 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
   }
 
   Future<void> _loadSuggestions({bool refresh = false}) async {
-    setState(() {
-      _loading = true;
-    });
+    setState(() => _loading = true);
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      setState(() {
-        _loading = false;
-      });
+      setState(() => _loading = false);
       return;
     }
-    // Fetch partner's suggestions if partnerEmail exists
     String? partnerUid;
     final userDoc = await FirebaseFirestore.instance
         .collection('users')
@@ -162,7 +162,6 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
           )
           .toList();
     }
-    // Get fresh Gemini suggestions with timeout
     final interests = await _getUserInterests();
     List<Map<String, dynamic>> geminiSuggestions = [];
     try {
@@ -184,18 +183,11 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
         );
       }
     }
-    // Merge and deduplicate by id
     final allSuggestionsMap = <String, Map<String, dynamic>>{};
-    for (final s in geminiSuggestions) {
-      allSuggestionsMap[s['id']] = s;
-    }
-    for (final s in partnerSuggestions) {
-      allSuggestionsMap[s['id']] = s;
-    }
+    for (final s in geminiSuggestions) allSuggestionsMap[s['id']] = s;
+    for (final s in partnerSuggestions) allSuggestionsMap[s['id']] = s;
     final allSuggestions = allSuggestionsMap.values.toList();
-    // Save all displayed suggestions for the current user
     for (final suggestion in allSuggestions) {
-      // Clean '**' from start if present
       String cleanTitle = suggestion['title'];
       String cleanDesc = suggestion['desc'];
       if (cleanTitle.startsWith('**')) {
@@ -204,15 +196,11 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
       if (cleanDesc.startsWith('**')) {
         cleanDesc = cleanDesc.replaceFirst(RegExp(r'^\*\*+'), '').trim();
       }
-      final cleanSuggestion = {
+      await _suggestionService.saveSuggestion(suggestion['id'], {
         ...suggestion,
         'title': cleanTitle,
         'desc': cleanDesc,
-      };
-      await _suggestionService.saveSuggestion(
-        cleanSuggestion['id'],
-        cleanSuggestion,
-      );
+      });
     }
     setState(() {
       _suggestions = allSuggestions.map((s) {
@@ -240,9 +228,8 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     final userData = userDoc.data();
     if (userData == null ||
         userData['partnerEmail'] == null ||
-        userData['partnerEmail'] == '') {
+        userData['partnerEmail'] == '')
       return null;
-    }
     final partnerQuery = await FirebaseFirestore.instance
         .collection('users')
         .where('email', isEqualTo: userData['partnerEmail'])
@@ -266,6 +253,8 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
           mainAxisSize: MainAxisSize.min,
           children: [
             const TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.center,
               tabs: [
                 Tab(text: 'Yes'),
                 Tab(text: 'No'),
@@ -310,9 +299,7 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
   }
 
   Widget _buildCardList(List<Map<String, dynamic>> cards) {
-    if (cards.isEmpty) {
-      return const Center(child: Text('No cards'));
-    }
+    if (cards.isEmpty) return const Center(child: Text('No cards'));
     return ListView(
       children: cards
           .map(
@@ -325,256 +312,317 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
     );
   }
 
+  // ── onSwipe callback — called by BOTH gesture swipes AND programmatic swipes ─
+  // This is the single source of truth for recording swipe results.
+
+  Future<bool> _onSwipe(
+    int previousIndex,
+    int? currentIndex,
+    CardSwiperDirection direction,
+  ) async {
+    if (previousIndex < 0 || previousIndex >= _suggestions.length) return false;
+    final suggestion = _suggestions[previousIndex];
+
+    if (direction == CardSwiperDirection.right) {
+      // Right = Yes (Love it)
+      _yes.add(suggestion);
+      await _suggestionService.swipeSuggestion(suggestion['id'], 'yes');
+      await _checkAndStoreMatch(suggestion);
+    } else if (direction == CardSwiperDirection.left) {
+      // Left = No (Pass)
+      _no.add(suggestion);
+      await _suggestionService.swipeSuggestion(suggestion['id'], 'no');
+    } else {
+      _skip.add(suggestion);
+      await _suggestionService.swipeSuggestion(suggestion['id'], 'skip');
+    }
+
+    setState(() {
+      if (_suggestions.isNotEmpty) _suggestions.removeAt(0);
+    });
+
+    if (_suggestions.isEmpty && mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No more suggestions!')));
+    }
+
+    return false; // returning false keeps the card stack intact (original behaviour)
+  }
+
+  // ── Build ─────────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Date Suggestions'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list_alt),
-            tooltip: 'View all swiped cards',
-            onPressed: _showSwipedCards,
-          ),
-        ],
-      ),
-      body: Center(
+      backgroundColor: cs.surface,
+      body: SafeArea(
         child: _loading
-            ? const CircularProgressIndicator()
+            ? Center(
+                child: CircularProgressIndicator(
+                  color: cs.primary,
+                  strokeWidth: 2,
+                ),
+              )
             : _suggestions.isEmpty
-            ? const Text('No suggestions yet.')
+            ? _buildEmptyState(cs)
             : Column(
-                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
+                  // ── Top bar ──────────────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 4.0),
-                    child: ElevatedButton.icon(
-                      icon: const Icon(Icons.refresh, size: 16),
-                      label: Text(
-                        'Generate More',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
+                    padding: const EdgeInsets.fromLTRB(20, 12, 12, 0),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Date Ideas',
+                            style: Theme.of(context).textTheme.titleLarge
+                                ?.copyWith(color: cs.onSurface),
+                          ),
                         ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(
-                          context,
-                        ).colorScheme.onPrimary,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                        IconButton(
+                          icon: Icon(
+                            Icons.list_alt_rounded,
+                            color: cs.onSurfaceVariant,
+                          ),
+                          tooltip: 'View swiped cards',
+                          onPressed: _showSwipedCards,
                         ),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
+                        IconButton(
+                          icon: Icon(
+                            Icons.refresh_rounded,
+                            color: cs.onSurfaceVariant,
+                          ),
+                          tooltip: 'Generate more',
+                          onPressed: _loading
+                              ? null
+                              : () => _loadSuggestions(refresh: true),
                         ),
-                        elevation: 2,
-                      ),
-                      onPressed: _loading
-                          ? null
-                          : () async {
-                              await _loadSuggestions(refresh: true);
-                            },
+                      ],
                     ),
                   ),
+
+                  // ── Hint ─────────────────────────────────────────────
                   Padding(
-                    padding: const EdgeInsets.only(bottom: 1.0),
+                    padding: const EdgeInsets.only(top: 6, bottom: 4),
                     child: Text(
-                      'You can swipe or click the buttons below.',
+                      'Tap the buttons below to decide',
                       style: TextStyle(
-                        fontSize: 15,
-                        color: Theme.of(
-                          context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        fontSize: 13,
+                        color: cs.onSurfaceVariant,
                       ),
                       textAlign: TextAlign.center,
                     ),
                   ),
-                  SizedBox(
-                    width: MediaQuery.of(context).size.width * 0.8,
-                    height: MediaQuery.of(context).size.height * 0.42,
-                    child: CardSwiper(
-                      cardsCount: _suggestions.length,
-                      numberOfCardsDisplayed: (_suggestions.length < 3)
-                          ? _suggestions.length
-                          : 3,
-                      cardBuilder: (context, index, _, __) {
-                        if (index < 0 || index >= _suggestions.length) {
-                          return null;
-                        }
-                        final suggestion = _suggestions[index];
-                        return Card(
-                          color: Theme.of(
-                            context,
-                          ).colorScheme.surfaceContainerHighest,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            side: BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 3,
-                            ),
-                          ),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                child: Text(
-                                  suggestion['title'],
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                ),
-                                child: Text(
-                                  suggestion['desc'],
-                                  style: const TextStyle(fontSize: 14),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      onSwipe: (previousIndex, currentIndex, direction) async {
-                        final suggestion = _suggestions[previousIndex];
-                        if (direction == CardSwiperDirection.left) {
-                          _yes.add(suggestion);
-                          await _suggestionService.swipeSuggestion(
-                            suggestion['id'],
-                            'yes',
-                          );
-                          await _checkAndStoreMatch(suggestion);
-                        } else if (direction == CardSwiperDirection.right) {
-                          _no.add(suggestion);
-                          await _suggestionService.swipeSuggestion(
-                            suggestion['id'],
-                            'no',
-                          );
-                        } else {
-                          _skip.add(suggestion);
-                          await _suggestionService.swipeSuggestion(
-                            suggestion['id'],
-                            'skip',
-                          );
-                        }
-                        setState(() {
-                          if (_suggestions.isNotEmpty) {
-                            _suggestions.removeAt(0);
+
+                  // ── Card swiper ───────────────────────────────────────
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: CardSwiper(
+                        controller: _swiperController,
+                        cardsCount: _suggestions.length,
+                        numberOfCardsDisplayed: _suggestions.length < 3
+                            ? _suggestions.length
+                            : 3,
+                        cardBuilder: (context, index, _, __) {
+                          if (index < 0 || index >= _suggestions.length) {
+                            return null;
                           }
-                        });
-                        if (_suggestions.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('No more suggestions!'),
-                            ),
+                          return _SuggestionCard(
+                            suggestion: _suggestions[index],
+                            cs: cs,
                           );
-                        }
-                        return false;
-                      },
+                        },
+                        // Single onSwipe handles both gesture & programmatic
+                        onSwipe: _onSwipe,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    spacing: 16,
-                    children: [
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(
-                            context,
-                          ).colorScheme.primary,
-                          foregroundColor: Theme.of(
-                            context,
-                          ).colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
-                          ),
-                        ),
-                        onPressed: _suggestions.isEmpty
-                            ? null
-                            : () async {
-                                final suggestion = _suggestions.first;
-                                _yes.add(suggestion);
-                                await _suggestionService.swipeSuggestion(
-                                  suggestion['id'],
-                                  'yes',
-                                );
-                                await _checkAndStoreMatch(suggestion);
-                                setState(() {
-                                  if (_suggestions.isNotEmpty) {
-                                    _suggestions.removeAt(0);
-                                  }
-                                });
-                                if (_suggestions.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('No more suggestions!'),
-                                    ),
-                                  );
-                                }
-                              },
-                        icon: const Icon(Icons.check),
-                        label: const Text('Yes'),
-                      ),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.error,
-                          foregroundColor: Theme.of(
-                            context,
-                          ).colorScheme.onError,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+
+                  // ── Buttons ───────────────────────────────────────────
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(32, 16, 32, 24),
+                    child: Row(
+                      children: [
+                        // Pass — triggers swipe RIGHT animation
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: cs.error,
+                              side: BorderSide(color: cs.error, width: 1.5),
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: _suggestions.isEmpty
+                                ? null
+                                : () => _swiperController.swipe(
+                                    CardSwiperDirection.left,
+                                  ),
+                            icon: const Icon(Icons.close_rounded, size: 20),
+                            label: const Text(
+                              'Pass',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ),
                         ),
-                        onPressed: _suggestions.isEmpty
-                            ? null
-                            : () async {
-                                final suggestion = _suggestions.first;
-                                _no.add(suggestion);
-                                await _suggestionService.swipeSuggestion(
-                                  suggestion['id'],
-                                  'no',
-                                );
-                                setState(() {
-                                  if (_suggestions.isNotEmpty) {
-                                    _suggestions.removeAt(0);
-                                  }
-                                });
-                                if (_suggestions.isEmpty) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('No more suggestions!'),
-                                    ),
-                                  );
-                                }
-                              },
-                        icon: const Icon(Icons.close),
-                        label: const Text('No'),
-                      ),
-                    ],
+                        const SizedBox(width: 16),
+                        // Love it — triggers swipe RIGHT animation
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: cs.primary,
+                              foregroundColor: cs.onPrimary,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                            ),
+                            onPressed: _suggestions.isEmpty
+                                ? null
+                                : () => _swiperController.swipe(
+                                    CardSwiperDirection.right,
+                                  ),
+                            icon: const Icon(Icons.favorite_rounded, size: 20),
+                            label: const Text(
+                              'Love it',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(ColorScheme cs) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.explore_outlined, size: 56, color: cs.outline),
+            const SizedBox(height: 16),
+            Text(
+              'No suggestions yet',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: cs.onSurface,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Generate some date ideas to get started.',
+              style: TextStyle(fontSize: 14, color: cs.onSurfaceVariant),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: () => _loadSuggestions(refresh: true),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Generate ideas'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 14,
+                ),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Card widget ───────────────────────────────────────────────────────────────
+
+class _SuggestionCard extends StatelessWidget {
+  final Map<String, dynamic> suggestion;
+  final ColorScheme cs;
+  const _SuggestionCard({required this.suggestion, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: cs.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: cs.primary, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withOpacity(0.08),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(28),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: cs.primaryContainer,
+              ),
+              child: Icon(Icons.favorite_rounded, color: cs.primary, size: 24),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              suggestion['title'] ?? '',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: cs.onSurface,
+                height: 1.25,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Divider(color: cs.outline.withOpacity(0.4), height: 1),
+            const SizedBox(height: 12),
+            Flexible(
+              child: Text(
+                suggestion['desc'] ?? '',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: cs.onSurfaceVariant,
+                  height: 1.55,
+                ),
+                textAlign: TextAlign.center,
+                overflow: TextOverflow.fade,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

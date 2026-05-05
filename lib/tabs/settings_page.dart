@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
@@ -115,6 +116,79 @@ class _SettingsPageState extends State<SettingsPage> {
       _companionName = (data['companionName'] as String?) ?? 'Ember';
       _companionLoading = false;
     });
+  }
+
+  Future<void> _showSupportDialog({
+    required String title,
+    required String message,
+    String? actionLabel,
+    Future<void> Function()? onAction,
+  }) async {
+    final cs = Theme.of(context).colorScheme;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Close'),
+          ),
+          if (actionLabel != null && onAction != null)
+            FilledButton(
+              onPressed: () async {
+                await onAction();
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: cs.primary,
+                foregroundColor: cs.onPrimary,
+              ),
+              child: Text(actionLabel),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showAboutSupport() async {
+    await _showSupportDialog(
+      title: 'About Closr',
+      message:
+          'Closr helps you and your partner keep track of suggestions, interests, and shared settings in one place.',
+    );
+  }
+
+  Future<void> _showPrivacySupport() async {
+    await _showSupportDialog(
+      title: 'Privacy policy',
+      message:
+          'Closr stores your account, companion, and preference data in Firebase so your experience stays in sync across devices. Review the app settings before sharing anything sensitive.',
+    );
+  }
+
+  Future<void> _showHelpSupport() async {
+    await _showSupportDialog(
+      title: 'Help & feedback',
+      message:
+          'If something feels off, copy a short note about what happened and share it with your team or support channel.',
+      actionLabel: 'Copy note',
+      onAction: () async {
+        await Clipboard.setData(
+          const ClipboardData(
+            text:
+                'Closr feedback: describe the issue, what you expected, and what happened instead.',
+          ),
+        );
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Feedback note copied to clipboard')),
+        );
+      },
+    );
   }
 
   // ── Companion picker ──────────────────────────────────────────────────────────
@@ -627,16 +701,19 @@ class _SettingsPageState extends State<SettingsPage> {
               _SettingsRowData(
                 icon: Icons.info_outline_rounded,
                 label: 'About Closr',
+                onTap: _showAboutSupport,
                 trailing: const _TrailingArrow(),
               ),
               _SettingsRowData(
                 icon: Icons.privacy_tip_outlined,
                 label: 'Privacy policy',
+                onTap: _showPrivacySupport,
                 trailing: const _TrailingArrow(),
               ),
               _SettingsRowData(
                 icon: Icons.help_outline_rounded,
                 label: 'Help & feedback',
+                onTap: _showHelpSupport,
                 trailing: const _TrailingArrow(),
               ),
             ],
@@ -861,10 +938,12 @@ class _GroupLabel extends StatelessWidget {
 class _SettingsRowData {
   final IconData icon;
   final String label;
+  final VoidCallback? onTap;
   final Widget trailing;
   const _SettingsRowData({
     required this.icon,
     required this.label,
+    this.onTap,
     required this.trailing,
   });
 }
@@ -890,23 +969,33 @@ class _SettingsGroup extends StatelessWidget {
           final isLast = i == rows.length - 1;
           return Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 14,
-                ),
-                child: Row(
-                  children: [
-                    Icon(row.icon, size: 20, color: cs.onSurfaceVariant),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Text(
-                        row.label,
-                        style: Theme.of(context).textTheme.bodyLarge,
-                      ),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: row.onTap,
+                  borderRadius: BorderRadius.vertical(
+                    top: Radius.circular(i == 0 ? 18 : 0),
+                    bottom: Radius.circular(isLast ? 18 : 0),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 14,
                     ),
-                    row.trailing,
-                  ],
+                    child: Row(
+                      children: [
+                        Icon(row.icon, size: 20, color: cs.onSurfaceVariant),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Text(
+                            row.label,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ),
+                        row.trailing,
+                      ],
+                    ),
+                  ),
                 ),
               ),
               if (!isLast)

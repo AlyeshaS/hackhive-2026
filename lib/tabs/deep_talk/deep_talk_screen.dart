@@ -157,7 +157,10 @@ class _DeepTalkScreenState extends State<DeepTalkScreen> {
                         child: Container(
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: Colors.white,
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                ? const Color(0xFF231519)
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(24),
                             border: Border.all(
                               color: cs.primary.withOpacity(0.3),

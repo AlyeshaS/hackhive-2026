@@ -30,37 +30,49 @@ class _ConnectScreenState extends State<ConnectScreen>
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        title: const Text('Connect'),
-        bottom: TabBar(
-          controller: _tabController,
-          dividerColor: cs.outlineVariant,
-          indicatorColor: cs.primary,
-          indicatorWeight: 2,
-          tabs: const [
-            Tab(text: 'Deep Talk'),
-            Tab(text: 'Letters'),
-            Tab(text: 'Conflict'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          const DeepTalkScreen(),
-          _ComingSoonTab(
-            icon: Icons.mail_outline_rounded,
-            title: 'Love Letters',
-            subtitle:
-                'Send heartfelt letters and time-capsule messages to be opened in the future.',
-            cs: cs,
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: TabBar(
+                  controller: _tabController,
+                  dividerColor: cs.outlineVariant,
+                  indicatorColor: cs.primary,
+                  indicatorWeight: 2,
+                  tabs: const [
+                    Tab(text: 'Deep Talk'),
+                    Tab(text: 'Letters'),
+                    Tab(text: 'Conflict'),
+                  ],
+                ),
+              ),
+            ),
           ),
-          _ComingSoonTab(
-            icon: Icons.handshake_outlined,
-            title: 'Conflict Mode',
-            subtitle:
-                'A guided space to navigate difficult conversations with care and structure.',
-            cs: cs,
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                const DeepTalkScreen(),
+                _ComingSoonTab(
+                  icon: Icons.mail_outline_rounded,
+                  title: 'Love Letters',
+                  subtitle:
+                      'Send heartfelt letters and time-capsule messages to be opened in the future.',
+                  cs: cs,
+                ),
+                _ComingSoonTab(
+                  icon: Icons.handshake_outlined,
+                  title: 'Conflict Mode',
+                  subtitle:
+                      'A guided space to navigate difficult conversations with care and structure.',
+                  cs: cs,
+                ),
+              ],
+            ),
           ),
         ],
       ),

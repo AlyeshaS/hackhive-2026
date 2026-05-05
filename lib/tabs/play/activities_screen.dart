@@ -30,41 +30,54 @@ class _ActivitiesScreenState extends State<ActivitiesScreen>
     final cs = Theme.of(context).colorScheme;
     return Scaffold(
       backgroundColor: cs.surface,
-      appBar: AppBar(
-        title: const Text('Activities'),
-        bottom: TabBar(
-          controller: _tabController,
-          dividerColor: cs.outlineVariant,
-          indicatorColor: cs.primary,
-          indicatorWeight: 2,
-          isScrollable: true,
-          tabs: const [
-            Tab(text: 'Quests'),
-            Tab(text: 'Games'),
-            Tab(text: 'Date Generator'),
-            Tab(text: 'Date Ideas'),
-          ],
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          const _QuestsTab(),
-          _ComingSoonTab(
-            icon: Icons.sports_esports_outlined,
-            title: 'Game Recommendations',
-            subtitle:
-                'Curated games for two — online and in-person — matched to your vibe.',
-            cs: cs,
+          SafeArea(
+            bottom: false,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Material(
+                color: Colors.transparent,
+                child: TabBar(
+                  controller: _tabController,
+                  dividerColor: cs.outlineVariant,
+                  indicatorColor: cs.primary,
+                  indicatorWeight: 2,
+                  isScrollable: true,
+                  tabAlignment: TabAlignment.center,
+                  tabs: const [
+                    Tab(text: 'Quests'),
+                    Tab(text: 'Games'),
+                    Tab(text: 'Date Generator'),
+                    Tab(text: 'Date Ideas'),
+                  ],
+                ),
+              ),
+            ),
           ),
-          _ComingSoonTab(
-            icon: Icons.explore_outlined,
-            title: 'Date Generator',
-            subtitle:
-                'Tell us your mood, time, and budget — we\'ll plan the perfect date.',
-            cs: cs,
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                const _QuestsTab(),
+                _ComingSoonTab(
+                  icon: Icons.sports_esports_outlined,
+                  title: 'Game Recommendations',
+                  subtitle:
+                      'Curated games for two — online and in-person — matched to your vibe.',
+                  cs: cs,
+                ),
+                _ComingSoonTab(
+                  icon: Icons.explore_outlined,
+                  title: 'Date Generator',
+                  subtitle:
+                      'Tell us your mood, time, and budget — we\'ll plan the perfect date.',
+                  cs: cs,
+                ),
+                const SuggestionsScreen(),
+              ],
+            ),
           ),
-          const SuggestionsScreen(),
         ],
       ),
     );
@@ -171,7 +184,9 @@ class _QuestsTabState extends State<_QuestsTab> {
                   decoration: BoxDecoration(
                     color: done
                         ? cs.primaryContainer.withOpacity(0.5)
-                        : Colors.white,
+                        : (Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF231519)
+                              : Colors.white),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(
                       color: done

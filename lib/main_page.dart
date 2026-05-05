@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'tabs/home_page.dart';
 import 'tabs/connect/connect_screen.dart';
-import 'tabs/play/play_screen.dart';
+import 'tabs/play/activities_screen.dart';
 import 'tabs/memories/memories_screen.dart';
 import 'tabs/settings_page.dart';
 
@@ -18,7 +18,7 @@ class _MainPageState extends State<MainPage> {
   static final List<Widget> _pages = <Widget>[
     const HomePage(),
     const ConnectScreen(),
-    const PlayScreen(),
+    const ActivitiesScreen(),
     const MemoriesScreen(),
     const SettingsPage(),
   ];
@@ -79,9 +79,9 @@ class _MainPageState extends State<MainPage> {
                   label: 'Connect',
                 ),
                 BottomNavigationBarItem(
-                  icon: Icon(Icons.play_circle_outline_rounded),
-                  activeIcon: Icon(Icons.play_circle_rounded),
-                  label: 'Play',
+                  icon: Icon(Icons.local_activity_outlined),
+                  activeIcon: Icon(Icons.local_activity_rounded),
+                  label: 'Activities',
                 ),
                 BottomNavigationBarItem(
                   icon: Icon(Icons.auto_stories_outlined),
