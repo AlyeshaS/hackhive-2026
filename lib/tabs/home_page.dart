@@ -78,12 +78,7 @@ class HomePage extends StatelessWidget {
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: _StatCard(
-                    label: 'STREAK',
-                    cs: cs,
-                    staticValue: '—',
-                    staticSub: 'days in a row',
-                  ),
+                  child: _StreakCard(user: user, cs: cs),
                 ),
               ],
             ),
@@ -263,7 +258,7 @@ class _CharacterOrb extends StatelessWidget {
 class _StatCard extends StatelessWidget {
   final String label;
   final ColorScheme cs;
-  final Stream<QuerySnapshot>? stream;
+  final Stream<dynamic>? stream;
   final String? staticValue;
   final String? staticSub;
 
@@ -290,12 +285,38 @@ class _StatCard extends StatelessWidget {
           Text(label, style: Theme.of(context).textTheme.labelSmall),
           const SizedBox(height: 8),
           if (stream != null)
-            StreamBuilder<QuerySnapshot>(
+            StreamBuilder<dynamic>(
               stream: stream,
               builder: (context, snapshot) {
-                final count = snapshot.data?.docs.length ?? 0;
+                // If this is a QuerySnapshot (collection), show docs length
+                if (snapshot.data is QuerySnapshot) {
+                  final count = (snapshot.data as QuerySnapshot).docs.length;
+                  return Text(
+                    '$count',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: cs.onPrimaryContainer,
+                      fontSize: 28,
+                    ),
+                  );
+                }
+                // If this is a DocumentSnapshot (single user doc), show a numeric field
+                if (snapshot.data is DocumentSnapshot) {
+                  final doc = snapshot.data as DocumentSnapshot;
+                  final val = doc.data() is Map<String, dynamic>
+                      ? (doc.data() as Map<String, dynamic>)['streakCurrent']
+                      : null;
+                  final textVal = val != null ? '$val' : '—';
+                  return Text(
+                    textVal,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: cs.onPrimaryContainer,
+                      fontSize: 28,
+                    ),
+                  );
+                }
+                // Fallback
                 return Text(
-                  '$count',
+                  staticValue ?? '—',
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     color: cs.onPrimaryContainer,
                     fontSize: 28,
@@ -339,6 +360,113 @@ class _SectionLabel extends StatelessWidget {
         letterSpacing: 0.1,
         color: cs.onSurfaceVariant,
       ),
+    );
+  }
+}
+
+class _StreakCard extends StatelessWidget {
+  final User? user;
+  final ColorScheme cs;
+  const _StreakCard({required this.user, required this.cs});
+
+  @override
+  Widget build(BuildContext context) {
+    if (user == null) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: cs.primaryContainer,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: cs.outlineVariant),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('STREAK', style: Theme.of(context).textTheme.labelSmall),
+            const SizedBox(height: 8),
+            Text(
+              '—',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: cs.onPrimaryContainer,
+                fontSize: 28,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'days in a row',
+              style: Theme.of(
+                context,
+              ).textTheme.labelSmall?.copyWith(color: cs.onSurfaceVariant),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final docStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user!.uid)
+        .snapshots();
+
+    return StreamBuilder<DocumentSnapshot>(
+      stream: docStream,
+      builder: (context, snapshot) {
+        final data = snapshot.data?.data() as Map<String, dynamic>?;
+        final current = data != null ? (data['streakCurrent'] as int? ?? 0) : 0;
+        final best = data != null ? (data['streakBest'] as int? ?? 0) : 0;
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: cs.primaryContainer,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: cs.outlineVariant),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('STREAK', style: Theme.of(context).textTheme.labelSmall),
+              const SizedBox(height: 8),
+              Text(
+                '$current',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  color: cs.onPrimaryContainer,
+                  fontSize: 28,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Text(
+                    'days in a row',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: cs.onSurfaceVariant,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: cs.surface,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: cs.outlineVariant),
+                    ),
+                    child: Text(
+                      'Best: $best',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: cs.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

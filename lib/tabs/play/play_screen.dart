@@ -1,6 +1,7 @@
 // play_screen.dart
 import 'package:flutter/material.dart';
 import '../suggestions/suggestions_screen.dart';
+import '../../services/streaks_service.dart';
 
 class ActivitiesScreen extends StatefulWidget {
   const ActivitiesScreen({super.key});
@@ -164,7 +165,15 @@ class _QuestsTabState extends State<_QuestsTab> {
             return Padding(
               padding: const EdgeInsets.only(bottom: 10),
               child: GestureDetector(
-                onTap: () => setState(() => _quests[i]['done'] = !done),
+                onTap: () async {
+                  setState(() => _quests[i]['done'] = !done);
+                  // record streak activity when completing a quest
+                  try {
+                    if (!done) {
+                      await StreaksService().recordActivity('quest_completed');
+                    }
+                  } catch (_) {}
+                },
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.all(16),

@@ -5,6 +5,7 @@ import 'suggestion_service.dart';
 import '../../gemini_service.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/streaks_service.dart';
 
 class SuggestionsScreen extends StatefulWidget {
   const SuggestionsScreen({super.key});
@@ -168,6 +169,10 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
       geminiSuggestions = await _geminiService
           .generateDateSuggestions(interests)
           .timeout(const Duration(seconds: 15));
+      // record streak activity for generating date ideas
+      try {
+        await StreaksService().recordActivity('date_ideas_view');
+      } catch (_) {}
     } on TimeoutException {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -450,14 +455,31 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                         // Pass — triggers swipe RIGHT animation
                         Expanded(
                           child: OutlinedButton.icon(
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: cs.error,
-                              side: BorderSide(color: cs.error, width: 1.5),
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
+                            style:
+                                OutlinedButton.styleFrom(
+                                  backgroundColor: cs.surface,
+                                  foregroundColor: cs.error,
+                                  side: BorderSide(color: cs.error, width: 1.5),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  elevation: 4,
+                                  shadowColor: cs.error.withOpacity(0.22),
+                                  surfaceTintColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ).copyWith(
+                                  overlayColor:
+                                      MaterialStateProperty.resolveWith(
+                                        (states) =>
+                                            states.contains(
+                                              MaterialState.pressed,
+                                            )
+                                            ? cs.error.withOpacity(0.12)
+                                            : null,
+                                      ),
+                                ),
                             onPressed: _suggestions.isEmpty
                                 ? null
                                 : () => _swiperController.swipe(
@@ -477,15 +499,30 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
                         // Love it — triggers swipe RIGHT animation
                         Expanded(
                           child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: cs.primary,
-                              foregroundColor: cs.onPrimary,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
+                            style:
+                                ElevatedButton.styleFrom(
+                                  backgroundColor: cs.primary,
+                                  foregroundColor: cs.onPrimary,
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 14,
+                                  ),
+                                  elevation: 4,
+                                  shadowColor: cs.primary.withOpacity(0.26),
+                                  surfaceTintColor: Colors.transparent,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ).copyWith(
+                                  overlayColor:
+                                      MaterialStateProperty.resolveWith(
+                                        (states) =>
+                                            states.contains(
+                                              MaterialState.pressed,
+                                            )
+                                            ? cs.onPrimary.withOpacity(0.14)
+                                            : null,
+                                      ),
+                                ),
                             onPressed: _suggestions.isEmpty
                                 ? null
                                 : () => _swiperController.swipe(
@@ -538,17 +575,27 @@ class _SuggestionsScreenState extends State<SuggestionsScreen>
               onPressed: () => _loadSuggestions(refresh: true),
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Generate ideas'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: cs.primary,
-                foregroundColor: cs.onPrimary,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 14,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-              ),
+              style:
+                  ElevatedButton.styleFrom(
+                    backgroundColor: cs.primary,
+                    foregroundColor: cs.onPrimary,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 14,
+                    ),
+                    elevation: 4,
+                    shadowColor: cs.primary.withOpacity(0.26),
+                    surfaceTintColor: Colors.transparent,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                  ).copyWith(
+                    overlayColor: MaterialStateProperty.resolveWith(
+                      (states) => states.contains(MaterialState.pressed)
+                          ? cs.onPrimary.withOpacity(0.14)
+                          : null,
+                    ),
+                  ),
             ),
           ],
         ),

@@ -92,6 +92,10 @@ class _SettingsPageState extends State<SettingsPage> {
   String _companionName = 'Ember';
   bool _companionLoading = true;
 
+  // partner state
+  String _partnerEmail = '';
+  DateTime? _anniversaryDate;
+
   final _prefsService = PreferencesService();
 
   @override
@@ -114,6 +118,11 @@ class _SettingsPageState extends State<SettingsPage> {
     setState(() {
       _companionEmoji = (data['companionEmoji'] as String?) ?? '🦊';
       _companionName = (data['companionName'] as String?) ?? 'Ember';
+      _partnerEmail = (data['partnerEmail'] as String?) ?? '';
+      final annivStr = data['anniversaryDate'] as String?;
+      if (annivStr != null && annivStr.isNotEmpty) {
+        _anniversaryDate = DateTime.tryParse(annivStr);
+      }
       _companionLoading = false;
     });
   }
@@ -192,6 +201,83 @@ class _SettingsPageState extends State<SettingsPage> {
   }
 
   // ── Companion picker ──────────────────────────────────────────────────────────
+  // ── Partner email dialog ───────────────────────────────────────────────────────
+
+  Future<void> _showAddPartnerDialog() async {
+    final cs = Theme.of(context).colorScheme;
+    final controller = TextEditingController(text: _partnerEmail);
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Add Partner'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Enter your partner\'s email to link your accounts.',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: controller,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(hintText: 'partner@email.com'),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () async {
+              final email = controller.text.trim();
+              final user = FirebaseAuth.instance.currentUser;
+              if (user != null) {
+                await FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(user.uid)
+                    .set({'partnerEmail': email}, SetOptions(merge: true));
+                setState(() => _partnerEmail = email);
+              }
+              if (dialogContext.mounted) Navigator.pop(dialogContext);
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: cs.primary,
+              foregroundColor: cs.onPrimary,
+            ),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showSetAnniversaryDialog() async {
+    final cs = Theme.of(context).colorScheme;
+
+    final selected = await showDatePicker(
+      context: context,
+      initialDate: _anniversaryDate ?? DateTime.now(),
+      firstDate: DateTime(1980),
+      lastDate: DateTime.now(),
+    );
+
+    if (selected != null) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'anniversaryDate': selected.toIso8601String(),
+        }, SetOptions(merge: true));
+        setState(() => _anniversaryDate = selected);
+      }
+    }
+  }
 
   Future<void> _showCompanionPicker() async {
     final cs = Theme.of(context).colorScheme;
@@ -620,12 +706,24 @@ class _SettingsPageState extends State<SettingsPage> {
               _SettingsRowData(
                 icon: Icons.favorite_outline_rounded,
                 label: 'Partner',
-                trailing: const _TrailingArrow(),
+                onTap: _showAddPartnerDialog,
+                trailing: _partnerEmail.isEmpty
+                    ? const _TrailingArrow()
+                    : Text(
+                        _partnerEmail,
+                        style: TextStyle(fontSize: 13, color: cs.primary),
+                      ),
               ),
               _SettingsRowData(
                 icon: Icons.cake_outlined,
                 label: 'Anniversary date',
-                trailing: const _TrailingArrow(),
+                onTap: _showSetAnniversaryDialog,
+                trailing: _anniversaryDate == null
+                    ? const _TrailingArrow()
+                    : Text(
+                        '${_anniversaryDate!.month}/${_anniversaryDate!.day}/${_anniversaryDate!.year}',
+                        style: TextStyle(fontSize: 13, color: cs.primary),
+                      ),
               ),
               _SettingsRowData(
                 icon: Icons.pets_rounded,

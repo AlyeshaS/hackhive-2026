@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../../services/streaks_service.dart';
 
 class SuggestionService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final StreaksService _streaks = StreaksService();
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
   Future<void> saveSuggestion(
@@ -16,7 +18,8 @@ class SuggestionService {
         .doc(currentUser.uid)
         .collection('suggestions')
         .doc(suggestionId)
-        .set({...data, 'swipe': null});
+        .set(data, SetOptions(merge: true));
+    await _streaks.recordActivity('date_suggestion_generated');
   }
 
   Stream<QuerySnapshot> getSuggestionsStream() {
