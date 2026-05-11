@@ -8,7 +8,7 @@ import 'main_page.dart';
 import 'auth/auth_gate.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'theme_provider.dart';
-import 'notifications_service.dart';
+import 'services/notifications_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -341,3 +341,4 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+

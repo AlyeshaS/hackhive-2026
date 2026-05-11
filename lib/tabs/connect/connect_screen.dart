@@ -1,6 +1,9 @@
 // connect_screen.dart
 import 'package:flutter/material.dart';
 import '../deep_talk/deep_talk_screen.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../love_letters_tab.dart';
 
 class ConnectScreen extends StatefulWidget {
   const ConnectScreen({super.key});
@@ -57,13 +60,7 @@ class _ConnectScreenState extends State<ConnectScreen>
               controller: _tabController,
               children: [
                 const DeepTalkScreen(),
-                _ComingSoonTab(
-                  icon: Icons.mail_outline_rounded,
-                  title: 'Love Letters',
-                  subtitle:
-                      'Send heartfelt letters and time-capsule messages to be opened in the future.',
-                  cs: cs,
-                ),
+                const LoveLettersTab(),
                 _ComingSoonTab(
                   icon: Icons.handshake_outlined,
                   title: 'Conflict Mode',

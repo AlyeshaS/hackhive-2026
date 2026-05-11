@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import '../auth/auth_service.dart';
 import '../theme_provider.dart';
-import '../notifications_service.dart';
+import '../services/notifications_service.dart';
 import 'preferences/preferences_service.dart';
 
 // ── Companion data ─────────────────────────────────────────────────────────────
@@ -1142,3 +1142,4 @@ class _ToggleSwitch extends StatelessWidget {
     );
   }
 }
+
