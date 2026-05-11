@@ -1,11 +1,11 @@
 {
-    "name": "hackhive2026",
-    "short_name": "hackhive2026",
+    "name": "Closr",
+    "short_name": "Closr",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Closr - Connect with your companion friends.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

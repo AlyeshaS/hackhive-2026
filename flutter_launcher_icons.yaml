@@ -1,0 +1,9 @@
+flutter_launcher_icons:
+  image_path: "assets/closr_logo.png"
+  adaptive_icon_background: "#FFF6E9"
+  android: "adaptive_icon"
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/closr_logo.png"
