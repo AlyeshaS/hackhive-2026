@@ -818,18 +818,18 @@ class _SettingsPageState extends State<SettingsPage> {
           ),
           const SizedBox(height: 28),
 
-          // ── Sign out (ORIGINAL — unchanged) ──────────────────────────
-          OutlinedButton(
+          // ── Sign out ──────────────────────────────────────────────────
+          ElevatedButton(
             onPressed: () async {
               await AuthService().signOut();
               if (context.mounted) {
                 Navigator.pushReplacementNamed(context, '/welcome');
               }
             },
-            style: OutlinedButton.styleFrom(
+            style: ElevatedButton.styleFrom(
               minimumSize: const Size.fromHeight(52),
-              foregroundColor: cs.primary,
-              side: BorderSide(color: cs.primary.withOpacity(0.5)),
+              backgroundColor: cs.primary,
+              foregroundColor: cs.onPrimary,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(18),
               ),
@@ -1142,4 +1142,3 @@ class _ToggleSwitch extends StatelessWidget {
     );
   }
 }
-
