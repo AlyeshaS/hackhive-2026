@@ -10,8 +10,14 @@ class ResolveScreen extends StatefulWidget {
 class _ResolveScreenState extends State<ResolveScreen> {
   int currentStage = 0;
   int currentPromptIndex = 0;
+  bool hasStartedQuestions = false;
   String selectedMode = 'Miscommunication';
   final TextEditingController customModeController = TextEditingController();
+
+  late List<String> sessionModes;
+  int lastCustomIndex = -1;
+  late PageController _introPageController;
+  int _introPageIndex = 0;
 
   final Map<String, List<String>> responses = {
     'Private Reflection': [],
@@ -123,16 +129,24 @@ class _ResolveScreenState extends State<ResolveScreen> {
     setState(() {
       currentStage = 0;
       currentPromptIndex = 0;
+      hasStartedQuestions = false;
       selectedMode = 'Miscommunication';
+      sessionModes = List.from(modes);
+      lastCustomIndex = -1;
       responseController.clear();
       responses.updateAll((key, value) => []);
     });
   }
 
+  void startQuestions() {
+    setState(() {
+      hasStartedQuestions = true;
+    });
+  }
+
   Future<void> showCustomModeDialog() async {
-    customModeController.text = selectedMode == 'Miscommunication'
-        ? ''
-        : selectedMode;
+    final isBuiltIn = modes.contains(selectedMode);
+    customModeController.text = isBuiltIn ? '' : selectedMode;
 
     final customMode = await showDialog<String>(
       context: context,
@@ -163,15 +177,37 @@ class _ResolveScreenState extends State<ResolveScreen> {
 
     if (customMode != null && customMode.isNotEmpty && mounted) {
       setState(() {
-        selectedMode = customMode;
+        final existingIndex = sessionModes.indexOf(customMode);
+
+        if (existingIndex != -1) {
+          selectedMode = customMode;
+          if (existingIndex >= modes.length) {
+            lastCustomIndex = existingIndex;
+          }
+        } else {
+          final insertAt = lastCustomIndex >= 0
+              ? lastCustomIndex + 1
+              : modes.length;
+          sessionModes.insert(insertAt, customMode);
+          lastCustomIndex = insertAt;
+          selectedMode = customMode;
+        }
       });
     }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    sessionModes = List.from(modes);
+    _introPageController = PageController();
   }
 
   @override
   void dispose() {
     responseController.dispose();
     customModeController.dispose();
+    _introPageController.dispose();
     super.dispose();
   }
 
@@ -181,36 +217,110 @@ class _ResolveScreenState extends State<ResolveScreen> {
       return _EndingScreen(onRestart: restartSession);
     }
 
+    if (!hasStartedQuestions) {
+      // Recreate controller with the desired initial page
+      _introPageController = PageController(initialPage: _introPageIndex);
+
+      return SizedBox(
+        height: MediaQuery.of(context).size.height - 80,
+        child: PageView(
+          controller: _introPageController,
+          physics: const PageScrollPhysics(),
+          onPageChanged: (page) {
+            setState(() {
+              _introPageIndex = page;
+            });
+          },
+          children: [
+            // Landing intro centered with Get started
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height - 160,
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _HeroCard(),
+                      const SizedBox(height: 24),
+                      FilledButton(
+                        onPressed: () {
+                          _introPageController.animateToPage(
+                            1,
+                            duration: const Duration(milliseconds: 420),
+                            curve: Curves.easeOutCubic,
+                          );
+                        },
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          minimumSize: const Size(220, 52),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                        ),
+                        child: const Text('Get started'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            // Mode selector page (swipe-to)
+            SingleChildScrollView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _ModeSelector(
+                    modes: sessionModes,
+                    selectedMode: selectedMode,
+                    onChanged: (mode) {
+                      setState(() {
+                        selectedMode = mode;
+                      });
+                    },
+                    onCustomPressed: showCustomModeDialog,
+                  ),
+                  const SizedBox(height: 20),
+                  FilledButton(
+                    onPressed: startQuestions,
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      minimumSize: const Size(double.infinity, 52),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: const Text('Start Questions'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return SingleChildScrollView(
       physics: const BouncingScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 32),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _HeroCard(),
-          const SizedBox(height: 20),
-          _ModeSelector(
-            modes: modes,
-            selectedMode: selectedMode,
-            onChanged: (mode) {
-              setState(() {
-                selectedMode = mode;
-              });
-            },
-            onCustomPressed: showCustomModeDialog,
-          ),
-          const SizedBox(height: 20),
           _ProgressHeader(
             stageTitle: currentStageTitle,
             currentPromptIndex: currentPromptIndex,
             totalPrompts: currentPrompts.length,
             progress: (currentPromptIndex + 1) / currentPrompts.length,
+            selectedMode: selectedMode,
           ),
           const SizedBox(height: 16),
           _PromptCard(
             prompt: currentPrompts[currentPromptIndex],
             controller: responseController,
-            selectedMode: selectedMode,
           ),
           const SizedBox(height: 20),
           _NavigationButtons(
@@ -219,6 +329,13 @@ class _ResolveScreenState extends State<ResolveScreen> {
             isLastStage: isLastStage,
             onBack: goBack,
             onNext: nextPrompt,
+            showIntroBack: currentStage == 0 && currentPromptIndex == 0,
+            onIntroBack: () {
+              _introPageIndex = 1;
+              setState(() {
+                hasStartedQuestions = false;
+              });
+            },
           ),
         ],
       ),
@@ -338,6 +455,10 @@ class _ModeSelector extends StatelessWidget {
                 onSelected: (_) => onChanged(mode),
                 selectedColor: cs.primaryContainer,
                 backgroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
                 labelStyle: TextStyle(
                   color: selected ? cs.onPrimaryContainer : cs.onSurface,
                   fontWeight: FontWeight.w600,
@@ -348,6 +469,7 @@ class _ModeSelector extends StatelessWidget {
                     color: selected
                         ? cs.primary.withOpacity(0.35)
                         : cs.outlineVariant,
+                    width: 1.0,
                   ),
                 ),
               );
@@ -357,13 +479,14 @@ class _ModeSelector extends StatelessWidget {
               label: const Text('Custom'),
               onPressed: onCustomPressed,
               backgroundColor: cs.surfaceContainerHighest,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               labelStyle: TextStyle(
                 color: cs.onSurface,
                 fontWeight: FontWeight.w600,
               ),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(999),
-                side: BorderSide(color: cs.outlineVariant),
+                side: BorderSide(color: cs.outlineVariant, width: 1.0),
               ),
             ),
           ],
@@ -378,12 +501,14 @@ class _ProgressHeader extends StatelessWidget {
   final int currentPromptIndex;
   final int totalPrompts;
   final double progress;
+  final String selectedMode;
 
   const _ProgressHeader({
     required this.stageTitle,
     required this.currentPromptIndex,
     required this.totalPrompts,
     required this.progress,
+    required this.selectedMode,
   });
 
   @override
@@ -402,6 +527,21 @@ class _ProgressHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: cs.primaryContainer.withOpacity(0.7),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: Text(
+              'Working through: $selectedMode',
+              style: textTheme.labelMedium?.copyWith(
+                color: cs.onPrimaryContainer,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           Text(
             stageTitle,
             style: textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
@@ -428,18 +568,32 @@ class _ProgressHeader extends StatelessWidget {
 class _PromptCard extends StatelessWidget {
   final String prompt;
   final TextEditingController controller;
-  final String selectedMode;
 
-  const _PromptCard({
-    required this.prompt,
-    required this.controller,
-    required this.selectedMode,
-  });
+  const _PromptCard({required this.prompt, required this.controller});
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final textTheme = Theme.of(context).textTheme;
+
+    // Calculate responsive line counts based on device height
+    final screenHeight = MediaQuery.of(context).size.height;
+    late int minLines;
+    late int maxLines;
+
+    if (screenHeight > 900) {
+      minLines = 10;
+      maxLines = 14;
+    } else if (screenHeight > 800) {
+      minLines = 8;
+      maxLines = 11;
+    } else if (screenHeight > 700) {
+      minLines = 7;
+      maxLines = 9;
+    } else {
+      minLines = 5;
+      maxLines = 7;
+    }
 
     return Container(
       width: double.infinity,
@@ -460,21 +614,6 @@ class _PromptCard extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           _SoftMessage(text: 'Read to understand, not to respond.'),
-          const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: cs.primaryContainer.withOpacity(0.7),
-              borderRadius: BorderRadius.circular(999),
-            ),
-            child: Text(
-              'Working through: $selectedMode',
-              style: textTheme.labelMedium?.copyWith(
-                color: cs.onPrimaryContainer,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
           const SizedBox(height: 18),
           Text(
             prompt,
@@ -486,8 +625,8 @@ class _PromptCard extends StatelessWidget {
           const SizedBox(height: 18),
           TextField(
             controller: controller,
-            minLines: 5,
-            maxLines: 8,
+            minLines: minLines,
+            maxLines: maxLines,
             decoration: InputDecoration(
               hintText: 'Write your thoughts here...',
               filled: true,
@@ -518,6 +657,8 @@ class _NavigationButtons extends StatelessWidget {
   final bool isLastStage;
   final VoidCallback onBack;
   final VoidCallback onNext;
+  final bool showIntroBack;
+  final VoidCallback? onIntroBack;
 
   const _NavigationButtons({
     required this.canGoBack,
@@ -525,6 +666,8 @@ class _NavigationButtons extends StatelessWidget {
     required this.isLastStage,
     required this.onBack,
     required this.onNext,
+    this.showIntroBack = false,
+    this.onIntroBack,
   });
 
   @override
@@ -541,10 +684,10 @@ class _NavigationButtons extends StatelessWidget {
 
     return Row(
       children: [
-        if (canGoBack)
+        if (canGoBack || showIntroBack)
           Expanded(
             child: OutlinedButton(
-              onPressed: onBack,
+              onPressed: canGoBack ? onBack : onIntroBack,
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
@@ -555,7 +698,7 @@ class _NavigationButtons extends StatelessWidget {
               child: const Text('Back'),
             ),
           ),
-        if (canGoBack) const SizedBox(width: 12),
+        if (canGoBack || showIntroBack) const SizedBox(width: 12),
         Expanded(
           child: FilledButton(
             onPressed: onNext,
