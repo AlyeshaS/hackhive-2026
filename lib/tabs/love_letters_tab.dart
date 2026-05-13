@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:math' as math;
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/love_letter_service.dart';
 import '../widgets/love_letter_tile.dart';
@@ -136,7 +137,7 @@ class _LoveLettersTabState extends State<LoveLettersTab> {
             foregroundColor: cs.onPrimary,
             onPressed: () => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const ComposeLoveLetterPage()),
+              MaterialPageRoute(builder: (_) => ComposeLoveLetterPage()),
             ),
             icon: const Icon(Icons.edit_rounded),
             label: const Text('Write'),
@@ -356,7 +357,137 @@ class _SectionShell extends StatelessWidget {
           ),
         ],
       ),
-      child: child,
+      child: Stack(
+        children: [
+          // Generate many floating hearts for a soft background pattern
+          for (int i = 0; i < 50; i++) _buildHeart(i, cs),
+          // Main content
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHeart(int i, ColorScheme cs) {
+    // Evenly distribute hearts in a grid, add tiny jitter for natural look
+    const total = 50;
+    final cols = (math.sqrt(total)).ceil();
+    final rows = (total / cols).ceil();
+    final col = i % cols;
+    final row = i ~/ cols;
+
+    final rand = math.Random(i * 7919);
+    final jitterX = (rand.nextDouble() - 0.5) * 0.18; // small horizontal jitter
+    final jitterY = (rand.nextDouble() - 0.5) * 0.14; // small vertical jitter
+
+    double x;
+    if (cols == 1) {
+      x = 0.0;
+    } else {
+      x = (col / (cols - 1)) * 2 - 1; // -1..1
+    }
+
+    double y;
+    if (rows == 1) {
+      y = 0.0;
+    } else {
+      y = (row / (rows - 1)) * 2 - 1; // -1..1
+    }
+
+    x = (x + jitterX).clamp(-1.0, 1.0);
+    y = (y + jitterY).clamp(-1.0, 1.0);
+
+    final size = 10 + rand.nextDouble() * 36; // 10..46
+    final opacity = 0.03 + rand.nextDouble() * 0.06; // 0.03..0.09
+    final durationSeconds = 4 + rand.nextInt(5); // 4..8
+    final hRange = 0.6 + rand.nextDouble() * 1.4; // small movement
+    final vRange = 0.6 + rand.nextDouble() * 1.0; // small movement
+    final rotation = (rand.nextDouble() - 0.5) * 0.4; // subtle tilt
+    final delayMs = rand.nextInt(900);
+
+    return Align(
+      alignment: Alignment(x as double, y as double),
+      child: _FloatingHeart(
+        size: size,
+        color: cs.primary.withOpacity(opacity),
+        duration: Duration(seconds: durationSeconds),
+        horizontalRange: hRange,
+        verticalRange: vRange,
+        rotation: rotation,
+        delay: Duration(milliseconds: delayMs),
+      ),
+    );
+  }
+}
+
+class _FloatingHeart extends StatefulWidget {
+  final double size;
+  final Color color;
+  final Duration duration;
+  final double horizontalRange;
+  final double verticalRange;
+  final double rotation;
+  final Duration delay;
+
+  const _FloatingHeart({
+    super.key,
+    required this.size,
+    required this.color,
+    required this.duration,
+    this.horizontalRange = 6,
+    this.verticalRange = 6,
+    this.rotation = 0.0,
+    this.delay = Duration.zero,
+  });
+
+  @override
+  State<_FloatingHeart> createState() => _FloatingHeartState();
+}
+
+class _FloatingHeartState extends State<_FloatingHeart>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(vsync: this, duration: widget.duration);
+
+    if (widget.delay > Duration.zero) {
+      Future.delayed(widget.delay, () {
+        if (mounted) _ctrl.repeat(reverse: true);
+      });
+    } else {
+      _ctrl.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (context, child) {
+        final t = _ctrl.value * math.pi * 2;
+        final dx = math.sin(t) * widget.horizontalRange;
+        final dy = math.cos(t) * widget.verticalRange * 0.6;
+        final rot = widget.rotation * math.sin(t * 0.5);
+
+        return Transform.translate(
+          offset: Offset(dx, dy),
+          child: Transform.rotate(angle: rot, child: child),
+        );
+      },
+      child: Icon(
+        Icons.favorite_rounded,
+        size: widget.size,
+        color: widget.color,
+      ),
     );
   }
 }
