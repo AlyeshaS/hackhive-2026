@@ -45,5 +45,11 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Closr uses the camera so you can add scrapbook photos from your dates.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Closr uses your photo library so you can pick scrapbook photos.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Closr may save edited scrapbook photos to your library.</string>
 </dict>
 </plist>
